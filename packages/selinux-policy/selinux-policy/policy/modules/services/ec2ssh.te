@@ -13,7 +13,7 @@ allow ec2ssh_initrc_t self:udp_socket create_socket_perms;
 allow ec2ssh_initrc_t self:tcp_socket create_socket_perms;
 allow ec2ssh_initrc_t self:netlink_route_socket { bind create nlmsg_read read write getattr };
 manage_files_pattern(ec2ssh_initrc_t, tmp_t, ec2ssh_tmp_t)
-init_script_domain(ec2ssh_initrc_t, ec2ssh_initrc_exec_t)
+init_system_domain(ec2ssh_initrc_t, ec2ssh_initrc_exec_t)
 
 term_use_console(ec2ssh_initrc_t)
 init_use_fds(ec2ssh_initrc_t)
@@ -34,3 +34,5 @@ optional_policy(`
 ')
 
 corenet_tcp_connect_http_port(ec2ssh_initrc_t)
+
+auth_read_passwd(ec2ssh_initrc_t)
