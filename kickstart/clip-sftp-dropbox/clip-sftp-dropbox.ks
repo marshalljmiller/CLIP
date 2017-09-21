@@ -64,7 +64,7 @@ selinux-policy
 -selinux-policy-mls
 selinux-policy-mcs
 selinux-policy-mcs-ssh
-#selinux-policy-mcs-ec2ssh
+selinux-policy-mcs-ec2ssh
 clip-miscfiles
 
 %end
@@ -207,23 +207,33 @@ EOF
 if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
 
         #set up /etc/ftsab
-        sed -i -e "s/\/dev\/root/\/dev\/xvde1/" /etc/fstab
+        sed -i -e "s/\/dev\/root/\/dev\/xvda1/" /etc/fstab
+        #sed -i -e "s/\/dev\/root/LABEL=root/" /etc/fstab
         mkdir -p /boot/grub
 
         #set up /boot/grub/menu.lst
         echo "default=0" >> /boot/grub/menu.lst
-        echo -e "timeout=0\n" >> /boot/grub/menu.lst
+        echo "fallback=1" >> /boot/grub/menu.lst
+        echo "timeout=0" >> /boot/grub/menu.lst
+        echo "" >> /boot/grub/menu.lst
         echo "title CLIP-KERNEL" >> /boot/grub/menu.lst
         echo "        root (hd0)" >> /boot/grub/menu.lst
-        KERNEL=`find /boot -iname vmlinuz*`
-        INITRD=`find /boot -iname initramfs*`
-        echo "        kernel $KERNEL ro root=/dev/xvde1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        KERNEL=`find /boot -iname vmlinuz-* ! -iname *rescue*`
+        INITRD=`find /boot -iname initramfs-* ! -iname *rescue*`
+        echo "        kernel $KERNEL ro root=/dev/xvda1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        echo "        initrd $INITRD" >> /boot/grub/menu.lst
+        echo "" >> /boot/grub/menu.lst
+        echo "title CLIP-KERNEL rescue" >> /boot/grub/menu.lst
+        echo "        root (hd0)" >> /boot/grub/menu.lst
+        KERNEL=`find /boot -iname vmlinuz-*rescue*`
+        INITRD=`find /boot -iname initramfs-*rescue**`
+        echo "        kernel $KERNEL ro root=/dev/xvda1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
         echo "        initrd $INITRD" >> /boot/grub/menu.lst
 
         # turn on the ssh key script
         chkconfig --level 34 ec2-get-ssh on
 
-	sed -i -e "s/__USERNAME__/$USERNAME/g" /etc/rc.d/init.d/ec2-get-ssh
+	sed -i -e "s/__USERS__/$USERNAME/g" /etc/rc.d/init.d/ec2-get-ssh
 
         # if you're the Government deploying to AWS and want to monitor people feel free to remove these lines.
         # But for our purposes, we explicitly don't want monitoring or logging
@@ -239,7 +249,10 @@ if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
         chattr +i /var/log/{yum.log,boot.log,secure,spooler,btmp,lastlog,utmp,wtmp,dmesg,maillog,messages,cron,audit/audit.log}
         rm -rf /root/* #*/
 
-	chage -E -1 $USERNAME
+	sed -i "s/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/" /etc/ssh/sshd_config
+	chage -d 0 "$USERNAME"
+	chmod 0644 /etc/ssh/sshd_config
+	#chage -E -1 $USERNAME
 
 cat << EOF > /etc/sysconfig/iptables
 *filter
