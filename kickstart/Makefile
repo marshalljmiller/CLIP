@@ -16,12 +16,12 @@ TARGET_ARCH ?= $(shell uname -i)
 
 ISO_VERSION ?= 1
 
-TMPL_CONTEXT := \
+TMPL_CONTEXT = \
   OS_REL=$(OS_REL) \
   CONFIG_BUILD_ENABLE_DHCP=$(CONFIG_BUILD_ENABLE_DHCP) \
   CONFIG_BUILD_AWS=$(CONFIG_BUILD_AWS)
 
-TMPL_ARGS := $(foreach TMPL_VAR,$(TMPL_CONTEXT),--var $(TMPL_VAR))
+TMPL_ARGS = $(foreach TMPL_VAR,$(TMPL_CONTEXT),--var $(TMPL_VAR))
 
 INSTALL_INCLUDES = \
   for i in `sed -n -e 's/^%include\s\+\(.*\)$$/\1/p' $(1)`; do \
@@ -178,16 +178,15 @@ setup-live-ks: $(SETUP_DEPS)
 	$(VERBOSE)$(call INSTALL_INCLUDES,$(LIVE_KS),$(BUILD_DIR))
 
 setup-aws-ks: $(SETUP_DEPS)
+	$(eval CONFIG_BUILD_AWS=y)
 	$(VERBOSE)test -d $(BUILD_DIR) || mkdir -p $(BUILD_DIR)
 	$(VERBOSE)cp --force $(KS) $(AWS_KS)
 	@echo "Modifying kickstart with build variables..."
 	$(VERBOSE)sed -i -e 's;#REPO-REPLACEMENT-PLACEHOLDER;$(REPO_LINES);' $(AWS_KS)
 	$(VERBOSE)sed -i -e 's;#CONFIG-BUILD-PLACEHOLDER;$(AWS_CONFIG_BUILD_BASH_VARS);' $(AWS_KS)
-	$(VERBOSE)sed -i -e 's;#CONFIG-BUILD-ADDTL-PACKAGES;$(shell echo "$(CONFIG_BUILD_ADDTL_PACKAGES)" | sed -e 's/ /\\n/g');' $(INST_KS)
+	$(VERBOSE)sed -i -e 's;#CONFIG-BUILD-ADDTL-PACKAGES;$(shell echo "$(CONFIG_BUILD_ADDTL_PACKAGES)" | sed -e 's/ /\\n/g');' $(AWS_KS)
 	$(FIX_KS_ENFORCING_MODE) $(AWS_KS)
-	$(VERBOSE)mkdir -p $(BUILD_DIR)/includes
-	$(VERBOSE)cp -a $(STATIC_INC) $(BUILD_DIR)/includes/
-	$(VERBOSE)$(call TMPL_INST,$(BUILD_DIR)/includes)
+	$(VERBOSE)$(call INSTALL_INCLUDES,$(AWS_KS),$(BUILD_DIR))
 
 clean:
 	$(VERBOSE)sudo rm -rf $(BUILD_DIR)
