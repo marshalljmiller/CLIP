@@ -1,4 +1,6 @@
-%if CONFIG_BUILD_ENABLE_DHCP == "y" or CONFIG_BUILD_AWS == "y":
+%if CONFIG_BUILD_AWS == "y":
+network --bootproto=dhcp --device=eth0
+%elif CONFIG_BUILD_ENABLE_DHCP == "y":
 network --bootproto=dhcp
 %endif
 
