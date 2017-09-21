@@ -71,10 +71,6 @@ else
 $(foreach VARIANT,$(VARIANTS), $(eval include kickstart/$(VARIANT)/variant_pkgs.mk))
 endif
 
-# FIXME: remove when AWS is supported by CLIP for v7
-ifneq ($(filter %-aws-ami,$(MAKECMDGOALS)),)
-$(error "AWS/EC2 targets not supported for RHEL/CentOS v7 quite yet. Stay tuned.")
-endif
 #
 # FIXME: remove when VPN variants supported by CLIP for v7
 ifneq ($(filter clip-vpn-%,$(MAKECMDGOALS)),)
