@@ -137,6 +137,7 @@ live-iso: $(DEPS) $(ADDTL_DEPS) setup-live-ks
 aws: $(ADDTL_DEPS) setup-aws-ks
 	@echo "Image Creator needs root permissions - please enter your sudo password if prompted."
 	$(VERBOSE)cd $(BUILD_DIR);sudo $(RUN_IMAGECREATE) "$(LIVECD_PYTHONPATH)" $(LIVECD_ARGS) --name=$(NAME)-$(ISO_VERSION) $(AWS_KS)
+	sudo e2label $(BUILD_DIR)/$(NAME)-$(ISO_VERSION).img rootimg
 	@echo "Creating AWS bundle from image"
 	mkdir -p $(AWS_BUNDLE_DIR)
 	$(EC2_BUNDLE_IMAGE) $(EC2_BUNDLE_IMAGE_ARGS)

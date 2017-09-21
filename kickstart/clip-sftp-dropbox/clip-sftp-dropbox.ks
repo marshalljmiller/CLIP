@@ -207,7 +207,7 @@ EOF
 if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
 
         #set up /etc/ftsab
-        sed -i -e "s/\/dev\/root/\/dev\/xvda1/" /etc/fstab
+        sed -i -e "s/\/dev\/root/LABEL=rootimg/" /etc/fstab
         #sed -i -e "s/\/dev\/root/LABEL=root/" /etc/fstab
         mkdir -p /boot/grub
 
@@ -220,14 +220,14 @@ if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
         echo "        root (hd0)" >> /boot/grub/menu.lst
         KERNEL=`find /boot -iname vmlinuz-* ! -iname *rescue*`
         INITRD=`find /boot -iname initramfs-* ! -iname *rescue*`
-        echo "        kernel $KERNEL ro root=/dev/xvda1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        echo "        kernel $KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
         echo "        initrd $INITRD" >> /boot/grub/menu.lst
         echo "" >> /boot/grub/menu.lst
         echo "title CLIP-KERNEL rescue" >> /boot/grub/menu.lst
         echo "        root (hd0)" >> /boot/grub/menu.lst
         KERNEL=`find /boot -iname vmlinuz-*rescue*`
         INITRD=`find /boot -iname initramfs-*rescue**`
-        echo "        kernel $KERNEL ro root=/dev/xvda1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        echo "        kernel $KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
         echo "        initrd $INITRD" >> /boot/grub/menu.lst
 
         # turn on the ssh key script
