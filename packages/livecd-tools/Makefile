@@ -28,7 +28,7 @@ PACKAGER := Quark Security, Inc
 # Hard code an arch if cross-compiling or going noarch.
 ARCH := noarch
 
-SOURCES := $(PKGNAME)-$(VERSION).tar.bz2 *.patch
+SOURCES := $(PKGNAME)-$(VERSION).tar.bz2 $(wildcard *.patch)
 
 # Spec file name
 RPM_SPEC := $(PKGNAME).spec
