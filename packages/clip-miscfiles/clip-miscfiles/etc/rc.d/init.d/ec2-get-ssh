@@ -5,6 +5,7 @@
 
 # Source function library
 . /etc/rc.d/init.d/functions
+set -e
 
 SSH_USERS="__USERS__"
 
