@@ -92,7 +92,7 @@ EC2_UPLOAD_BUNDLE_ARGS := -b $(AWS_BUCKET) -a $(AWS_ACCESS_KEY_ID) -s $(AWS_ACCE
 EC2_REGISTER := $(EC2_API_TOOLS)/*/bin/ec2-register
 EC2_REGISTER_ARGS := -O $(AWS_ACCESS_KEY_ID) -W $(AWS_ACCESS_KEY) $(AWS_BUCKET)/$(NAME)-$(ISO_VERSION).img.manifest.xml --name "$(NAME)-$(ISO_VERSION)" --architecture x86_64 --kernel $(AWS_KERNEL) --region $(AWS_AVAIL_ZONE)
 EC2_HOME := $(EC2_API_TOOLS)/ec2-api-tools-$(EC2_API_TOOLS_VER)
-JAVA_HOME ?= /usr/lib/jvm/java
+JAVA_HOME ?= /usr/lib/jvm/jre
 
 override LIVECD_ARGS := $(LIVECD_ARGS)
 
