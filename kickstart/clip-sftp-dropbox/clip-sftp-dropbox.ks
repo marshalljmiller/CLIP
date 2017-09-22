@@ -208,7 +208,6 @@ if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
 
         #set up /etc/ftsab
         sed -i -e "s/\/dev\/root/LABEL=rootimg/" /etc/fstab
-        #sed -i -e "s/\/dev\/root/LABEL=root/" /etc/fstab
         mkdir -p /boot/grub
 
         #set up /boot/grub/menu.lst
@@ -249,10 +248,7 @@ if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
         chattr +i /var/log/{yum.log,boot.log,secure,spooler,btmp,lastlog,utmp,wtmp,dmesg,maillog,messages,cron,audit/audit.log}
         rm -rf /root/* #*/
 
-	sed -i "s/ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/" /etc/ssh/sshd_config
-	chage -d 0 "$USERNAME"
-	chmod 0644 /etc/ssh/sshd_config
-	#chage -E -1 $USERNAME
+	chage -E -1 $USERNAME
 
 cat << EOF > /etc/sysconfig/iptables
 *filter
