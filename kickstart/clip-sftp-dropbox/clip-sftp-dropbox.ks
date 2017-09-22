@@ -288,7 +288,7 @@ EOF
 	chage -d 0 "$USERNAME"
 fi
 
-semodule -r auditadm -r secadm
+semodule --priority=100 -r auditadm -r secadm
 
 # This is rather unfortunate, but the remediation content 
 # starts services, which need to be killed/shutdown if
