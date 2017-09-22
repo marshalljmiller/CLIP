@@ -11,7 +11,7 @@ $tailoring \
 oscap xccdf generate fix \
 $tailoring \
 --result-id xccdf_org.open-scap_testresult_$xccdf_profile \
---template urn:xccdf:fix:script:sh \
+$fix_template \
 /root/scap/post/html/results.xml > /root/scap/post/remediation-script.sh
 chmod +x /root/scap/post/remediation-script.sh
 
