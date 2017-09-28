@@ -54,6 +54,8 @@ reboot --eject
 
 %include includes/standard-storage
 
+%include includes/standard-network
+
 %packages --excludedocs
 %include includes/standard-packages
 #CONFIG-BUILD-ADDTL-PACKAGES
