@@ -49,5 +49,8 @@
 # INSERTED BY BOOTSTRAP.SH
 #rhel7.3 = /opt/repos/rhel-7.3
 # INSERTED BY BOOTSTRAP.SH
-centos-7.3-base = /home/marshall/centos-7.3-base
-centos-7.3-updates = /home/marshall/centos-7.3-updates
+#centos-7.3-base = /home/marshall/centos-7.3-base
+#centos-7.3-updates = /home/marshall/centos-7.3-updates
+# INSERTED BY BOOTSTRAP.SH
+rhel-7.3-server = /opt/repos/rhel-7.3-server
+rhel-7.3-server-optional = /opt/repos/rhel-7.3-server-optional
