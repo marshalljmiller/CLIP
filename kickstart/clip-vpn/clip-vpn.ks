@@ -67,8 +67,8 @@ selinux-policy-mcs
 selinux-policy-mcs-ssh
 selinux-policy-mcs-unprivuser
 selinux-policy-mcs-ec2ssh
-selinux-policy-mcs-config-strongswan
-selinux-policy-mcs-vpnadm
+#selinux-policy-mcs-config-strongswan
+#selinux-policy-mcs-vpnadm
 clip-miscfiles
 
 %end
