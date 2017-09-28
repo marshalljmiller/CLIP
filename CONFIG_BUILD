@@ -19,11 +19,11 @@
 # 			    This includes support for ED25519 and RSA keys and disables weak algorithms.
 # 			    See here for info on the configuration: https://stribika.github.io/2015/01/04/secure-secure-shell.html
 # Note: these variables and values will be inserted into /root/clip-info.txt for inspection at run-time.
-CONFIG_BUILD_ENFORCING_MODE := y
+CONFIG_BUILD_ENFORCING_MODE := n
 CONFIG_BUILD_REMEDIATE := y
 CONFIG_BUILD_UNCONFINED_TOOR := y
 CONFIG_BUILD_ENABLE_DHCP := n
-CONFIG_BUILD_VPN_ENABLE_TOOR := n
+CONFIG_BUILD_VPN_ENABLE_TOOR := y
 CONFIG_BUILD_ENABLE_SSH_6 := n
 
 # List of RPMs that are pre-rolled.  These will be linked into our custom yum repo during the build process.
