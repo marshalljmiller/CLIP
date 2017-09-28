@@ -4,11 +4,11 @@
 # order.
 # 2) Please use the following define (with a percent sign and the appropriate
 # prerelease tag):
-#     define prerelease dr6
+#%%define prerelease dr1
 
 Name:           strongswan
-Version:        5.2.0
-Release:        7%{?prerelease:.%{prerelease}}%{?dist}
+Release:        1%{?dist}
+Version:        5.5.3
 Summary:        An OpenSource IPsec-based VPN and TNC solution
 Group:          System Environment/Daemons
 License:        GPLv2+
@@ -16,9 +16,7 @@ URL:            http://www.strongswan.org/
 Source0:        http://download.strongswan.org/%{name}-%{version}%{?prerelease}.tar.bz2
 # Initscript for epel6
 Source1:        %{name}.sysvinit
-Patch0:         strongswan-5.2.0-json.patch
 Patch1:         fix_updown.patch
-
 # Use RTLD_GLOBAL when loading plugins and link them to libstrongswan
 #
 # The patch hasn't been accepted upstream because of insufficient
@@ -55,11 +53,13 @@ BuildRequires:  trousers-devel
 BuildRequires:  libxml2-devel
 BuildRequires:  pam-devel
 BuildRequires:  json-c-devel
+BuildRequires:  libgcrypt-devel
+BuildRequires:  systemd-devel
 %if 0%{?fedora} >= 19 || 0%{?rhel} >= 7
 BuildRequires:  NetworkManager-devel
 BuildRequires:  NetworkManager-glib-devel
 Obsoletes:      %{name}-NetworkManager < 0:5.0.4-5
-BuildRequires:  systemd
+BuildRequires:  systemd, systemd-devel
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -69,8 +69,6 @@ Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 %endif
-
-%define _binaries_in_noarch_packages_terminate_build 0
 
 %description
 The strongSwan IPsec implementation supports both the IKEv1 and IKEv2 key
@@ -109,9 +107,7 @@ PT-TLS to support TNC over TLS.
 
 %prep
 %setup -q -n %{name}-%{version}%{?prerelease}
-%patch0 -p1
 %patch1 -p1
-#%patch1 -p1
 
 echo "For migration from 4.6 to 5.0 see http://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1" > README.Fedora
 
@@ -120,7 +116,6 @@ autoreconf
 # --with-ipsecdir moves internal commands to /usr/libexec/strongswan
 # --bindir moves 'pki' command to /usr/libexec/strongswan
 # See: http://wiki.strongswan.org/issues/552
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/lib64/pkgconfig
 %configure --disable-static \
     --with-ipsec-script=%{name} \
     --sysconfdir=%{_sysconfdir}/%{name} \
@@ -131,9 +126,15 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/lib64/pkgconfig
     --with-tss=trousers \
 %if 0%{?fedora} >= 19 || 0%{?rhel} >= 7
     --enable-nm \
+    --enable-systemd \
 %endif
     --enable-openssl \
+    --enable-unity \
+    --enable-ctr \
+    --enable-ccm \
+    --enable-gcm \
     --enable-md4 \
+    --enable-gcrypt \
     --enable-xauth-eap \
     --enable-xauth-pam \
     --enable-xauth-noauth \
@@ -230,22 +231,17 @@ fi
 
 %files
 %doc README README.Fedora COPYING NEWS TODO
-%dir %{_sysconfdir}/%{name}
-%{_sysconfdir}/%{name}/ipsec.d/
-%config(noreplace) %{_sysconfdir}/%{name}/ipsec.conf
-%config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
-%dir %{_sysconfdir}/%{name}/swanctl/
-%config(noreplace) %{_sysconfdir}/%{name}/swanctl/swanctl.conf
+%config(noreplace) %{_sysconfdir}/%{name}
 %if 0%{?fedora} >= 19 || 0%{?rhel} >= 7
 %{_unitdir}/%{name}.service
+%{_unitdir}/%{name}-swanctl.service
+%{_sbindir}/charon-systemd
 %else
 %{_initddir}/%{name}
 %endif
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/libcharon.so.0
 %{_libdir}/%{name}/libcharon.so.0.0.0
-%{_libdir}/%{name}/libhydra.so.0
-%{_libdir}/%{name}/libhydra.so.0.0.0
 %{_libdir}/%{name}/libtls.so.0
 %{_libdir}/%{name}/libtls.so.0.0.0
 %{_libdir}/%{name}/libpttls.so.0
@@ -254,8 +250,15 @@ fi
 %{_libdir}/%{name}/lib%{name}.so.0.0.0
 %{_libdir}/%{name}/libvici.so.0
 %{_libdir}/%{name}/libvici.so.0.0.0
+%{_libdir}/%{name}/libtpmtss.so.0
+%{_libdir}/%{name}/libtpmtss.so.0.0.0
 %dir %{_libdir}/%{name}/plugins
 %{_libdir}/%{name}/plugins/lib%{name}-aes.so
+%{_libdir}/%{name}/plugins/lib%{name}-ctr.so
+%{_libdir}/%{name}/plugins/lib%{name}-unity.so
+%{_libdir}/%{name}/plugins/lib%{name}-ccm.so
+%{_libdir}/%{name}/plugins/lib%{name}-gcm.so
+%{_libdir}/%{name}/plugins/lib%{name}-gcrypt.so
 %{_libdir}/%{name}/plugins/lib%{name}-attr.so
 %{_libdir}/%{name}/plugins/lib%{name}-cmac.so
 %{_libdir}/%{name}/plugins/lib%{name}-constraints.so
@@ -303,10 +306,10 @@ fi
 %{_libdir}/%{name}/plugins/lib%{name}-eap-identity.so
 %{_libdir}/%{name}/plugins/lib%{name}-acert.so
 %{_libdir}/%{name}/plugins/lib%{name}-vici.so
+%{_libdir}/%{name}/plugins/lib%{name}-curve25519.so
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/_copyright
 %{_libexecdir}/%{name}/_updown
-%{_libexecdir}/%{name}/_updown_espmark
 %{_libexecdir}/%{name}/charon
 %{_libexecdir}/%{name}/scepclient
 %{_libexecdir}/%{name}/starter
@@ -324,23 +327,16 @@ fi
 %{_mandir}/man5/%{name}_ipsec.secrets.5.gz
 %{_mandir}/man5/%{name}_swanctl.conf.5.gz
 %{_mandir}/man8/%{name}.8.gz
-%{_mandir}/man8/%{name}__updown.8.gz
-%{_mandir}/man8/%{name}__updown_espmark.8.gz
 %{_mandir}/man8/%{name}_scepclient.8.gz
 %{_mandir}/man8/%{name}_charon-cmd.8.gz
 %{_mandir}/man8/%{name}_swanctl.8.gz
-%{_sysconfdir}/%{name}/%{name}.d/
 %{_datadir}/%{name}/templates/config/
 %{_datadir}/%{name}/templates/database/
-%exclude /usr/lib/debug
-%exclude /usr/src/debug
 
 %files tnc-imcvs
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/libimcv.so.0
 %{_libdir}/%{name}/libimcv.so.0.0.0
-%{_libdir}/%{name}/libpts.so.0
-%{_libdir}/%{name}/libpts.so.0.0.0
 %{_libdir}/%{name}/libtnccs.so.0
 %{_libdir}/%{name}/libtnccs.so.0.0.0
 %{_libdir}/%{name}/libradius.so.0
@@ -390,9 +386,79 @@ fi
 %endif
 
 %changelog
-* Tue Feb 17 2015 Pat McClory <pat@quarksecurity.com> - 5.2.0-8
-- set pkg_config_path
-- Remove /usr/lib/debug
+* Mon Jun 12 2017 Paul Wouters <pwouters@redhat.com> - 5.5.3-1
+- Updated to 5.5.3
+
+* Sat May 27 2017 Paul Wouters <pwouters@redhat.com> - 5.5.2-1
+- Updated to 5.5.2
+
+* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 5.5.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
+* Thu Sep 15 2016 Pavel Šimerda <psimerda@redhat.com> - 5.5.0-2
+- Resolves: #1367796 - Enable the unity plugin
+
+* Mon Aug 08 2016 Pavel Šimerda <psimerda@redhat.com> - 5.5.0-1
+- New version 5.5.0
+
+* Wed Jun 22 2016 Pavel Šimerda <psimerda@redhat.com>
+- Enable IKEv2 GCM (requires gcrypt module as well) - merged from f22 by Paul Wouters
+
+* Wed Jun 22 2016 Pavel Šimerda <psimerda@redhat.com> - 5.4.0-1
+- New version 5.4.0
+
+* Thu Mar 03 2016 Pavel Šimerda <psimerda@redhat.com> - 5.3.5-1
+- New version 5.3.5
+
+* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 5.3.3-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Fri Jan 15 2016 Paul Wouters <pwouters@redhat.com> - 5.3.3-2
+- Enable IKEv2 GCM (requires gcrypt module as well)
+
+* Tue Sep 29 2015 Pavel Šimerda <psimerda@redhat.com> - 5.3.3-1
+- new version 5.3.3
+
+* Thu Sep 24 2015 Pavel Šimerda <psimerda@redhat.com> - 5.3.2-3
+- Resolves: #1264598 - strongswan: many configuration files are not protected
+
+* Fri Jun 19 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.3.2-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
+* Tue Jun 09 2015 Pavel Šimerda <psimerda@redhat.com>
+- new version 5.3.2
+
+* Fri Jun 05 2015 Pavel Šimerda <psimerda@redhat.com> - 5.3.1-1
+- new version 5.3.1
+
+* Tue Mar 31 2015 Pavel Šimerda <psimerda@redhat.com> - 5.3.0-1
+- new version 5.3.0
+
+* Fri Feb 20 2015 Avesh Agarwal <avagarwa@redhat.com> - 5.2.2-2
+- Fixes strongswan swanctl service issue rhbz#1193106
+
+* Tue Jan 06 2015 Pavel Šimerda <psimerda@redhat.com> - 5.2.2-1
+- new version 5.2.2
+
+* Thu Dec 18 2014 Avesh Agarwal <avagarwa@redhat.com> - 5.2.2-0.2.dr1
+- Enabled ccm, and ctr plugins as it seems enabling just openssl does
+  not work for using ccm and ctr algos.
+
+* Mon Dec 8 2014 Avesh Agarwal <avagarwa@redhat.com> - 5.2.2-0.1.dr1
+- New strongswan developer release 5.2.2dr1
+
+* Mon Nov 24 2014 Avesh Agarwal <avagarwa@redhat.com> - 5.2.1-2
+- 1167331: Enabled native systemd support.
+- Does not disable old systemd, starter, ipsec.conf support yet.
+
+* Thu Oct 30 2014 Avesh Agarwal <avagarwa@redhat.com> - 5.2.1-1
+- New upstream release 5.2.1
+
+* Thu Oct 16 2014 Avesh Agarwal <avagarwa@redhat.com> - 5.2.1-0.2.rc1
+- New upstream release candidate 5.2.1rc1
+
+* Fri Oct 10 2014 Pavel Šimerda <psimerda@redhat.com> - 5.2.1-1
+- new version 5.2.1dr1
 
 * Thu Sep 25 2014 Pavel Šimerda <psimerda@redhat.com> - 5.2.0-7
 - use upstream patch for json/json-c dependency

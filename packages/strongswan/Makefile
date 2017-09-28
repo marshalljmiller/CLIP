@@ -11,11 +11,11 @@ PKGNAME := strongswan
 
 # This is the version number of the RPM that will be
 # generated.  Typically you bump this for delivery.
-VERSION := 5.2.0
+VERSION := 5.5.3
 
 # Bump this if creating multiple releases from the same
 # version.
-RELEASE := 7.el6
+RELEASE := 1.el7
 
 # The name of the Vendor
 VENDOR := null
@@ -25,7 +25,7 @@ PACKAGER ?= null
 
 # Snag the architecture.  Assume host arch.
 # Hard code an arch if cross-compiling or going noarch.
-ARCH := noarch
+ARCH := x86_64
 
 SOURCES := $(PKGNAME)-$(VERSION).tar.bz2 *.patch strongswan.sysvinit
 
