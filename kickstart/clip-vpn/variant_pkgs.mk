@@ -4,4 +4,4 @@ clip-miscfiles \
 selinux-policy \
 livecd-tools \
 pungi \
-#strongswan
+strongswan
