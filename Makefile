@@ -71,12 +71,6 @@ else
 $(foreach VARIANT,$(VARIANTS), $(eval include kickstart/$(VARIANT)/variant_pkgs.mk))
 endif
 
-#
-# FIXME: remove when VPN variants supported by CLIP for v7
-ifneq ($(filter clip-vpn-%,$(MAKECMDGOALS)),)
-$(error "The CLIP VPN variant is not supported for RHEL/CentOS v7 quite yet. Stay tuned.")
-endif
-
 ifeq ($(CONFIG_BUILD_ENABLE_SSH_6),n)
 PACKAGES := $(filter-out openssh-six,$(PACKAGES))
 endif
@@ -186,13 +180,11 @@ SYSTEMS := $(shell find $(KICKSTART_DIR) -maxdepth 1 ! -name kickstart ! -name i
 
 # These are targets supported by the kickstart/Makefile that will be used to generate LiveCD images.
 # FIXME: remove when VPN is supported by CLIP for v7
-#LIVECDS := $(foreach SYSTEM,$(SYSTEMS),$(addsuffix -live-iso,$(SYSTEM)))
-LIVECDS := $(foreach SYSTEM,$(filter-out clip-vpn,$(SYSTEMS)),$(addsuffix -live-iso,$(SYSTEM)))
+LIVECDS := $(foreach SYSTEM,$(SYSTEMS),$(addsuffix -live-iso,$(SYSTEM)))
 
 # These are targets supported by the kickstart/Makefile that will be used to generate installation ISOs.
 # FIXME: remove when AWS is supported by CLIP for v7
-#INSTISOS := $(foreach SYSTEM,$(SYSTEMS)),$(addsuffix -inst-iso,$(SYSTEM)))
-INSTISOS := $(foreach SYSTEM,$(filter-out clip-vpn,$(SYSTEMS)),$(addsuffix -inst-iso,$(SYSTEM)))
+INSTISOS := $(foreach SYSTEM,$(SYSTEMS),$(addsuffix -inst-iso,$(SYSTEM)))
 
 # These are targets supported by the kickstart/Makefile that will be used to generate AWS AMI
 AWSBUNDLES := $(foreach SYSTEM,$(SYSTEMS),$(addsuffix -aws-ami,$(SYSTEM)))
