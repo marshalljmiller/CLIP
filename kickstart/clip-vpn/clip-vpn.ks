@@ -243,30 +243,6 @@ chage -E -1 sftp
 # Need to do some additional customizations if we're building for AWS
 if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
 
-	#set up /etc/ftsab
-	sed -i -e "s/\/dev\/root/\/dev\/xvde1/" /etc/fstab
-	mkdir -p /boot/grub
-
-	#set up /boot/grub/menu.lst
-	echo "default=0" >> /boot/grub/menu.lst
-	echo -e "timeout=0\n" >> /boot/grub/menu.lst
-	echo "title CLIP-KERNEL" >> /boot/grub/menu.lst
-	echo "        root (hd0)" >> /boot/grub/menu.lst
-	KERNEL=`find /boot -iname vmlinuz*`
-	INITRD=`find /boot -iname initramfs*`
-	echo "        kernel $KERNEL ro root=/dev/xvde1 rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
-	echo "        initrd $INITRD" >> /boot/grub/menu.lst
-
-	# disable password auth
-	sed -i "s/PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
-
-	# turn on the ssh key script
-	chkconfig --level 34 ec2-get-ssh on
-
-	# if you're the Government deploying to AWS and want to monitor people feel free to remove these lines.
-	# But for our purposes, we explicitly don't want monitoring or logging
-	> /etc/issue
-	> /etc/issue.net
 	#well logs are still useful for debugging purposes :)
 	if [ x"$CONFIG_BUILD_VPN_ENABLE_TOOR" != "xy" ]
 	then
@@ -288,7 +264,7 @@ if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
 		SSH_USERS="$SSH_USERS toor"
 		chage -E -1 $USERNAME 
 	fi
-	sed -i -e "s/__USERS__/$SSH_USERS/g" /etc/rc.d/init.d/ec2-get-ssh
+%include includes/standard-aws
 
 	cat << EOF > /etc/sysconfig/iptables
 *mangle
@@ -327,23 +303,10 @@ else
 	rpm -e selinux-policy-mcs-ec2ssh
 fi
 
-sed -i -e 's/.*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i -e 's/#\s*RSAAuthentication .*/RSAAuthentication yes/' /etc/ssh/sshd_config
-sed -i -e 's/#\s*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-sed -i -e 's;.*AuthorizedKeysFile.*;AuthorizedKeysFile /home/%u/.ssh/authorized_keys;' /etc/ssh/sshd_config
-sed -i -e 's/GSSAPIAuthentication .*/GSSAPIAuthentication no/g' /etc/ssh/sshd_config
+%include includes/standard-sshd
 
-#make sure you're using the internal sftp
-sed -i -r -e "s/Subsystem\s*sftp.*//g" /etc/ssh/sshd_config
-
-echo -e "Subsystem sftp internal-sftp\n" >> /etc/ssh/sshd_config
-echo -e "Match Group sftp\n" >> /etc/ssh/sshd_config
-echo -e "        AllowTCPForwarding no\n" >> /etc/ssh/sshd_config
-echo -e "        X11Forwarding no\n" >> /etc/ssh/sshd_config
-echo -e "        ChrootDirectory /home\n" >> /etc/ssh/sshd_config
-echo -e "        ForceCommand internal-sftp\n" >> /etc/ssh/sshd_config
-
-semanage boolean -N -S ${POLNAME} -m --on ssh_chroot_rw_homedirs
+SFTP_GROUP=sftp
+%include includes/standard-sftp
 
 # This is rather unfortunate, but the remediation content 
 # starts services, which need to be killed/shutdown if
