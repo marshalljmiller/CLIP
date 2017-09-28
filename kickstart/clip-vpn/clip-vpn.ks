@@ -70,6 +70,7 @@ selinux-policy-mcs-ec2ssh
 #selinux-policy-mcs-config-strongswan
 #selinux-policy-mcs-vpnadm
 clip-miscfiles
+strongswan
 
 %end
 
