@@ -150,25 +150,10 @@ groupadd "sftp-only"
 
 #modify the ssh config
 
-# tweak auth 
-sed -i "s/PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
-sed -i -e 's/.*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i -e 's/#\s*RSAAuthentication .*/RSAAuthentication yes/' /etc/ssh/sshd_config
-sed -i -e 's/#\s*PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-sed -i -e 's;.*AuthorizedKeysFile.*;AuthorizedKeysFile /home/%u/.ssh/authorized_keys;' /etc/ssh/sshd_config
-sed -i -e 's/GSSAPIAuthentication .*/GSSAPIAuthentication no/g' /etc/ssh/sshd_config
-# make sure you're using the internal sftp
-sed -i -r -e "s/Subsystem\s*sftp.*//g" /etc/ssh/sshd_config
-echo -e "\nSubsystem sftp internal-sftp\n" >> /etc/ssh/sshd_config
-# give users with the sftp-only group into a chroot rooted at /home
-echo -e "Match Group sftp-only" >> /etc/ssh/sshd_config
-echo -e "\tChrootDirectory /home" >> /etc/ssh/sshd_config
-echo -e "\tAllowTCPForwarding no" >> /etc/ssh/sshd_config
-echo -e "\tX11Forwarding no" >> /etc/ssh/sshd_config
-echo -e "\tForceCommand internal-sftp -d %u" >> /etc/ssh/sshd_config
+%include includes/standard-sshd
 
-semanage boolean -N -S ${POLNAME} -m --on selinuxuser_use_ssh_chroot
-#semanage boolean -N -S ${POLNAME} -m --on ssh_enable_sftp_chroot_dyntrans 
+SFTP_GROUP=sftp-only
+%include includes/standard-sftp
 
 # You can remove this if you'd prefer a
 # more graphical boot that also hides boot-time
@@ -205,39 +190,9 @@ EOF
 
 # Need to do some additional customizations if we're building for AWS
 if [ x"$CONFIG_BUILD_AWS" == "xy" ]; then
+	SSH_USERS=$USERNAME
+%include includes/standard-aws
 
-        #set up /etc/ftsab
-        sed -i -e "s/\/dev\/root/LABEL=rootimg/" /etc/fstab
-        mkdir -p /boot/grub
-
-        #set up /boot/grub/menu.lst
-        echo "default=0" >> /boot/grub/menu.lst
-        echo "fallback=1" >> /boot/grub/menu.lst
-        echo "timeout=0" >> /boot/grub/menu.lst
-        echo "" >> /boot/grub/menu.lst
-        echo "title CLIP-KERNEL" >> /boot/grub/menu.lst
-        echo "        root (hd0)" >> /boot/grub/menu.lst
-        KERNEL=`find /boot -iname vmlinuz-* ! -iname *rescue*`
-        INITRD=`find /boot -iname initramfs-* ! -iname *rescue*`
-        echo "        kernel $KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
-        echo "        initrd $INITRD" >> /boot/grub/menu.lst
-        echo "" >> /boot/grub/menu.lst
-        echo "title CLIP-KERNEL rescue" >> /boot/grub/menu.lst
-        echo "        root (hd0)" >> /boot/grub/menu.lst
-        KERNEL=`find /boot -iname vmlinuz-*rescue*`
-        INITRD=`find /boot -iname initramfs-*rescue**`
-        echo "        kernel $KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
-        echo "        initrd $INITRD" >> /boot/grub/menu.lst
-
-        # turn on the ssh key script
-        chkconfig --level 34 ec2-get-ssh on
-
-	sed -i -e "s/__USERS__/$USERNAME/g" /etc/rc.d/init.d/ec2-get-ssh
-
-        # if you're the Government deploying to AWS and want to monitor people feel free to remove these lines.
-        # But for our purposes, we explicitly don't want monitoring or logging
-        > /etc/issue
-        > /etc/issue.net
         chkconfig rsyslog off
         chkconfig auditd off
         # TODO: this should really be done via policy
