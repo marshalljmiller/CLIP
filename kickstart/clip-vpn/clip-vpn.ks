@@ -67,9 +67,11 @@ selinux-policy-mcs
 selinux-policy-mcs-ssh
 selinux-policy-mcs-unprivuser
 selinux-policy-mcs-ec2ssh
-#selinux-policy-mcs-config-strongswan
-#selinux-policy-mcs-vpnadm
+selinux-policy-mcs-config-strongswan
+selinux-policy-mcs-ipsec
+selinux-policy-mcs-vpnadm
 clip-miscfiles
+configure_strongswan
 strongswan
 
 %end
@@ -233,7 +235,7 @@ useradd -m vpn
 semanage user -N -a -R vpnadm_r vpnadm_u
 semanage login -N -a -s vpnadm_u vpn
 usermod -s /usr/bin/strongswan_login.py vpn
-usermod --pass="$HASHED_PASSWD" 
+usermod --pass="$HASHED_PASSWD" vpn
 chage -E -1 vpn
 
 useradd -m sftp
