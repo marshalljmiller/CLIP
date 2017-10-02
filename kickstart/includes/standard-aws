@@ -1,0 +1,61 @@
+
+        #set up /etc/ftsab
+        sed -i -e "s/\/dev\/root/LABEL=rootimg/" /etc/fstab
+
+        #set up /boot/grub/menu.lst
+        mkdir -p /boot/grub
+
+        KERNEL_VER=`rpm -q --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' kernel`
+        if [ -z "$KERNEL_VER" ]; then
+                echo "warning: could not determine kernel version"
+        else
+                KERNEL=/boot/vmlinuz-$KERNEL_VER
+                INITRD=/boot/initramfs-$KERNEL_VER.img
+                if [ ! -f $KERNEL -a ! -f $INITRD ]; then
+                        echo "warning: missing $KERNEL and $INITRD" >/dev/pts/0
+                elif [ ! -f $KERNEL ]; then
+                        echo "warning: missing $KERNEL"
+                elif [ ! -f $INITRD ]; then
+                        echo "warning: missing $INITRD"
+                fi
+        fi
+
+        RESCUE_KERNEL=`find /boot -iname vmlinuz-*rescue*`
+        if [ -z "$RESCUE_KERNEL" ]; then
+                echo "warning: rescue kernel not found"
+        elif echo -n "$RESCUE_KERNEL" | grep -q '\s'; then
+                echo "warning: more than one rescue kernel found"
+        fi
+        RESCUE_INITRD=`find /boot -iname initramfs-*rescue*`
+        if [ -z "$RESCUE_INITRD" ]; then
+                echo "warning: rescue initramfs not found"
+        elif echo -n "$RESCUE_INITRD" | grep -q '\s'; then
+                echo "warning: more than one rescue initramfs found"
+        fi
+
+        echo "default=0" >> /boot/grub/menu.lst
+        echo "fallback=1" >> /boot/grub/menu.lst
+        echo "timeout=0" >> /boot/grub/menu.lst
+        echo "" >> /boot/grub/menu.lst
+        echo "title CLIP-KERNEL" >> /boot/grub/menu.lst
+        echo "        root (hd0)" >> /boot/grub/menu.lst
+        echo "        kernel $KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        echo "        initrd $INITRD" >> /boot/grub/menu.lst
+        echo "" >> /boot/grub/menu.lst
+        echo "title CLIP-KERNEL rescue" >> /boot/grub/menu.lst
+        echo "        root (hd0)" >> /boot/grub/menu.lst
+        echo "        kernel $RESCUE_KERNEL ro root=LABEL=rootimg rd_NO_PLYMOUTH" >> /boot/grub/menu.lst
+        echo "        initrd $RESCUE_INITRD" >> /boot/grub/menu.lst
+
+	# disable password auth
+	sed -i "s/PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
+
+	# turn on the ssh key script
+	chkconfig --level 34 ec2-get-ssh on
+
+	# if you're the Government deploying to AWS and want to monitor people feel free to remove these lines.
+	# But for our purposes, we explicitly don't want monitoring or logging
+	> /etc/issue
+	> /etc/issue.net
+
+	sed -i -e "s/__USERS__/$SSH_USERS/g" /etc/rc.d/init.d/ec2-get-ssh

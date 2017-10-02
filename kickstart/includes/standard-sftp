@@ -1,0 +1,12 @@
+#make sure you're using the internal sftp
+sed -i -r -e "s/Subsystem\s*sftp.*//g" /etc/ssh/sshd_config
+echo -e "\nSubsystem sftp internal-sftp" >> /etc/ssh/sshd_config
+
+echo -e "Match Group $SFTP_GROUP" >> /etc/ssh/sshd_config
+echo -e "        AllowTCPForwarding no" >> /etc/ssh/sshd_config
+echo -e "        X11Forwarding no" >> /etc/ssh/sshd_config
+echo -e "        ChrootDirectory /home" >> /etc/ssh/sshd_config
+echo -e "        ForceCommand internal-sftp -d %u" >> /etc/ssh/sshd_config
+
+semanage boolean -N -S ${POLNAME} -m --on selinuxuser_use_ssh_chroot
+
