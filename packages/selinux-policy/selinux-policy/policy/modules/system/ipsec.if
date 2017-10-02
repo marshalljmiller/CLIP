@@ -335,6 +335,27 @@ interface(`ipsec_read_config',`
 	allow $1 ipsec_conf_file_t:file read_file_perms;
 ')
 
+
+########################################
+## <summary>
+##	Modify the IPSEC configuration
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`ipsec_write_config',`
+	gen_require(`
+		type ipsec_conf_file_t;
+	')
+
+	files_search_etc($1)
+	allow $1 ipsec_conf_file_t:file write_file_perms;
+')
+
 ########################################
 ## <summary>
 ##	Match the default SPD entry.
