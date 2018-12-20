@@ -52,7 +52,7 @@ if [ "$DISABLE_FIPS" = "y" ]; then
 fi
 
 # boot the installed vm and run login test
-$base_dir/qemu-login.sh $DISK_IMAGE || true
+$base_dir/qemu-login.sh $DISK_IMAGE
 
 # mount the vm image and validate SCAP results
-sudo $base_dir/test-scap-results.sh $DISK_IMAGE
+sudo $base_dir/test-scap-results.sh $DISK_IMAGE || true
