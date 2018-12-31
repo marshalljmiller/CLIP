@@ -7,10 +7,10 @@
 
 
 usage() {
-  echo "usage: $0 ISO_PATH"
+  echo "usage: $0 ISO_PATH [LEGACY|UEFI]"
 }
 
-if [ $# -ne 1 ]; then
+if [ $# -lt 1 -a $# -gt 2 ]; then
   usage
   exit 1
 fi
@@ -23,10 +23,31 @@ if [ ! -e "$ISO_PATH" ]; then
   exit 1
 fi
 
+FIRMWARE_MODE="$2"
+if [ -z "$FIRMWARE_MODE" ]; then
+	FIRMWARE_MODE="LEGACY"
+else
+	if [ "$FIRMWARE_MODE" != "LEGACY" -a "$FIRMWARE_MODE" != "UEFI" ]; then
+		usage
+		echo "error: firmware mode '$FIRMWARE_MODE' is not supported.  must be either LEGACY or UEFI"
+		exit 1
+	fi
+fi
+
+if [ "$FIRMWARE_MODE" = "UEFI" ]; then
+	if [ ! -e "/usr/share/OVMF/OVMF_CODE.secboot.fd" ]; then
+		echo "error: UEFI bios image not found.  please install the OVMF package"
+		exit 1
+	fi
+	BIOS_ARGS="-bios /usr/share/OVMF/OVMF_CODE.secboot.fd"
+else
+	BIOS_ARGS=
+fi
+
 /usr/bin/expect -f - <<EOF
 set timeout 10
 
-spawn /usr/libexec/qemu-kvm -boot d -cdrom $ISO_PATH -m 512 -nographic -vga none -device sga
+spawn /usr/libexec/qemu-kvm $BIOS_ARGS -boot d -cdrom $ISO_PATH -m 512 -nographic -vga none -device sga
 
 send_user "waiting for boot menu\n"
 expect {
