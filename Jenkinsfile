@@ -64,7 +64,7 @@ List getTaskMap(List axes) {
                         }
                     }
                 } catch (hudson.AbortException err) {
-                    error("No suitable nodes found")
+                    error("No suitable nodes found: ${err}")
                 }
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
