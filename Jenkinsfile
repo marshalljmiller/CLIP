@@ -76,7 +76,7 @@ List getTaskMap(List axes) {
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
                         node(nodeLabel) {
-                            sh "sudo rm -rf .* *"
+                            sh "sudo rm -rf .* * || true"
                             checkout scm
                             if(!fileExists(repoFile)) {
                                 error("No CONFIG_REPO file " + repoFile)
