@@ -67,10 +67,10 @@ List getTaskMap(List axes) {
                     error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
                     message = err.getMessage()
-                    if(message != null and message.equals("")) {
+                    if(message != null and message.equals("Queue task was cancelled")) {
                         error("No suitable nodes found")
                     } else {
-                        error("Not sure: ${err}")
+                        error("Not sure: message: ${message}: ${err}")
                     }
                 }
                 try {
