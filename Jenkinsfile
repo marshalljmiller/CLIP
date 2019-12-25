@@ -63,8 +63,15 @@ List getTaskMap(List axes) {
                             sh "true"
                         }
                     }
+                } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
+                    error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
-                    error("No suitable nodes found: ${err}")
+                    message = err.getMessage()
+                    if(message != null and message.equals("")) {
+                        error("No suitable nodes found")
+                    } else {
+                        error("Not sure: ${err}")
+                    }
                 }
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
