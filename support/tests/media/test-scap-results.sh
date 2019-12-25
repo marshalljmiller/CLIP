@@ -67,6 +67,7 @@ mount /dev/$vg_name/root $MOUNT_DIR
 is_mounted=1
 
 scap_result_file=$MOUNT_DIR/root/scap/post/html/results.xml
+cp -r $MOUNT_DIR/root/scap ./scap
 if [ ! -e $scap_result_file ]; then
   echo "error: scap scan results do not exist"
   exit 1
