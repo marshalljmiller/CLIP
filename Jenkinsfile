@@ -64,11 +64,11 @@ List getTaskMap(List axes) {
                             sh "true"
                         }
                     }
-                //} catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
-                //    error("FlowInterruptedException: ${err}")
+                } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
+                    error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
-                    String message = err.message
-                    if(message != null && message.equals("Queue task was cancelled")) {
+                    String message = "${err}"
+                    if(message != null && message.contains("Queue task was cancelled")) {
                         error("No suitable nodes found: ${err}")
                     } else {
                         error("hudson.AbortException but message is wrong: message: ${message}: ${err}")
