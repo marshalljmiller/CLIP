@@ -56,7 +56,7 @@ List getTaskMap(List axes) {
         String media_type = axis['media_type']
         Map task = [name:axisEnv.join(', '), job:{ ->
             stage outerStage
-            catchError(message:'stage failed', buildResult:'UNSTABLE', stageResult:'UNSTABLE') {
+            catchError(message:'stage failed', buildResult:'UNSTABLE', stageResult:'UNSTABLE', catchInterruptions:false) {
                 // see if a particular node exists.  there may be better ways to do this
                 try {
                     timeout(time: 2, unit: 'SECONDS') {
@@ -69,11 +69,14 @@ List getTaskMap(List axes) {
                     if(message != null && message.contains("Queue task was cancelled")) {
                         error("No suitable nodes found")
                     } else {
-                        error("hudson.AbortException when trying to find node but message is unexpected: message: ${message}")
+                        echo "hudson.AbortException when trying to find node but message is unexpected: message: ${message}"
+                        raise err
                     }
                 } catch (err) {
-                    error("Some random exception when trying to find node: ${err}")
+                    echo "Some random exception when trying to find node: ${err}"
+                    raise err
                 }
+                // perform the build and test
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
                         node(nodeLabel) {
@@ -94,10 +97,12 @@ List getTaskMap(List axes) {
                     if(message != null && message.contains("Queue task was cancelled")) {
                         error("Timeout exceeded during build and test")
                     } else {
-                        error("hudson.AbortException when trying to build and test but message is unexpected: message: ${message}")
+                        echo "hudson.AbortException when trying to build and test but message is unexpected: message: ${message}"
+                        raise err
                     }
                 } catch (err) {
-                    error("Some random exception while running build and test: ${err}")
+                    echo "Some random exception while running build and test: ${err}"
+                    raise err
                 }
             }
         }]
