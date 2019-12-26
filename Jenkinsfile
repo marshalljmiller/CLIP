@@ -1,6 +1,6 @@
 
 Map matrix_axes = [
-    os: ['centos7', 'rhel8', 'centos8'],
+    os: ['rhel8', 'centos8'],
     //os: ['rhel7', 'centos7', 'rhel8', 'centos8'],
     hosttype: ['clip'],
     target_name: ['minimal', 'sftp-dropbox', 'apache', 'vpn'],
@@ -67,12 +67,14 @@ List getTaskMap(List axes) {
                 //} catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
                 //    error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
-                    message = err.getMessage()
+                    String message = err.message
                     if(message != null && message.equals("Queue task was cancelled")) {
-                        error("No suitable nodes found")
+                        error("No suitable nodes found: ${err}")
                     } else {
-                        error("Not sure: message: ${message}: ${err}")
+                        error("hudson.AbortException but message is wrong: message: ${message}: ${err}")
                     }
+                } catch (err) {
+                    error("Some random exception trying to find node: ${err}")
                 }
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
@@ -90,7 +92,7 @@ List getTaskMap(List axes) {
                         }
                     }
                 } catch (hudson.AbortException err) {
-                    error("Timeout exceeded during build and test")
+                    error("Timeout exceeded during build and test: ${err}")
                 }
             }
         }]
