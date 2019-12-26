@@ -1,6 +1,7 @@
 
 Map matrix_axes = [
-    os: ['rhel7', 'centos7', 'rhel8', 'centos8'],
+    os: ['centos7', 'rhel8', 'centos8'],
+    //os: ['rhel7', 'centos7', 'rhel8', 'centos8'],
     hosttype: ['clip'],
     target_name: ['minimal', 'sftp-dropbox', 'apache', 'vpn'],
     media_type: ['inst-iso', 'live-iso'],
