@@ -63,8 +63,8 @@ List getTaskMap(List axes) {
                             sh "true"
                         }
                     }
-                } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
-                    error("FlowInterruptedException: ${err}")
+                //} catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
+                //    error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
                     message = err.getMessage()
                     if(message != null && message.equals("Queue task was cancelled")) {
