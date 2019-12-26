@@ -70,11 +70,11 @@ List getTaskMap(List axes) {
                         error("No suitable nodes found")
                     } else {
                         echo "hudson.AbortException when trying to find node but message is unexpected: message: ${message}"
-                        raise err
+                        throw err
                     }
                 } catch (err) {
                     echo "Some random exception when trying to find node: ${err}"
-                    raise err
+                    throw err
                 }
                 // perform the build and test
                 try {
@@ -98,11 +98,11 @@ List getTaskMap(List axes) {
                         error("Timeout exceeded during build and test")
                     } else {
                         echo "hudson.AbortException when trying to build and test but message is unexpected: message: ${message}"
-                        raise err
+                        throw err
                     }
                 } catch (err) {
                     echo "Some random exception while running build and test: ${err}"
-                    raise err
+                    throw err
                 }
             }
         }]
