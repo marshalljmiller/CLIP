@@ -26,7 +26,10 @@ List getMatrixAxes(Map matrix_axes) {
         prevCombo = comboNext
     }
     for (entry in prevCombo) {
-        entry['os'] = entry['os_name'] + entry['os_version'][0]
+        for (letter in entry['os_version']) {
+            entry['os'] = entry['os_name'] + letter
+            break
+        }
     }
     return prevCombo
 }
