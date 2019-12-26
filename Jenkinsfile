@@ -64,17 +64,15 @@ List getTaskMap(List axes) {
                             sh "true"
                         }
                     }
-                } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException err) {
-                    error("FlowInterruptedException: ${err}")
                 } catch (hudson.AbortException err) {
                     String message = "${err}"
                     if(message != null && message.contains("Queue task was cancelled")) {
-                        error("No suitable nodes found: ${err}")
+                        error("No suitable nodes found")
                     } else {
-                        error("hudson.AbortException but message is wrong: message: ${message}: ${err}")
+                        error("hudson.AbortException when trying to find node but message is unexpected: message: ${message}")
                     }
                 } catch (err) {
-                    error("Some random exception trying to find node: ${err}")
+                    error("Some random exception when trying to find node: ${err}")
                 }
                 try {
                     timeout(time: 120, unit: 'MINUTES') {
@@ -92,7 +90,14 @@ List getTaskMap(List axes) {
                         }
                     }
                 } catch (hudson.AbortException err) {
-                    error("Timeout exceeded during build and test: ${err}")
+                    String message = "${err}"
+                    if(message != null && message.contains("Queue task was cancelled")) {
+                        error("Timeout exceeded during build and test")
+                    } else {
+                        error("hudson.AbortException when trying to build and test but message is unexpected: message: ${message}")
+                    }
+                } catch (err) {
+                    error("Some random exception while running build and test: ${err}")
                 }
             }
         }]
