@@ -1,10 +1,10 @@
 
 Map matrix_axes = [
     hosttype: ['clip'],
-    target_name: ['minimal', 'sftp-dropbox', 'apache', 'vpn'],
     media_type: ['inst-iso', 'live-iso'],
-    os_version: ['7.6', '8.1']
+    target_name: ['minimal', 'sftp-dropbox', 'apache', 'vpn'],
     os_name: ['rhel', 'centos']
+    os_version: ['7.6', '8.1'],
 ]
 
 @NonCPS
