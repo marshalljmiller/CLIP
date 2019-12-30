@@ -35,9 +35,9 @@ files_pid_file(ctdbd_var_run_t)
 # Local policy
 #
 
-allow ctdbd_t self:capability { chown ipc_lock net_admin net_raw sys_nice };
+allow ctdbd_t self:capability { chown dac_read_search ipc_lock net_admin net_raw sys_nice sys_resource };
 allow ctdbd_t self:capability2 block_suspend;
-allow ctdbd_t self:process { setpgid signal_perms setsched };
+allow ctdbd_t self:process { setpgid setrlimit signal_perms setsched };
 allow ctdbd_t self:fifo_file rw_fifo_file_perms;
 allow ctdbd_t self:unix_stream_socket { accept connectto listen };
 allow ctdbd_t self:netlink_route_socket r_netlink_socket_perms;
@@ -45,6 +45,7 @@ allow ctdbd_t self:packet_socket create_socket_perms;
 allow ctdbd_t self:tcp_socket create_stream_socket_perms;
 allow ctdbd_t self:udp_socket create_socket_perms;
 allow ctdbd_t self:rawip_socket create_socket_perms;
+allow ctdbd_t self:netlink_tcpdiag_socket create_socket_perms;
 
 append_files_pattern(ctdbd_t, ctdbd_log_t, ctdbd_log_t)
 create_files_pattern(ctdbd_t, ctdbd_log_t, ctdbd_log_t)
@@ -76,6 +77,9 @@ manage_files_pattern(ctdbd_t, ctdbd_var_run_t, ctdbd_var_run_t)
 manage_sock_files_pattern(ctdbd_t, ctdbd_var_run_t, ctdbd_var_run_t)
 files_pid_filetrans(ctdbd_t, ctdbd_var_run_t, dir)
 
+setattr_files_pattern(ctdbd_t, ctdbd_exec_t, ctdbd_exec_t)
+write_files_pattern(ctdbd_t, ctdbd_exec_t, ctdbd_exec_t)
+
 can_exec(ctdbd_t, ctdbd_exec_t)
 
 kernel_read_network_state(ctdbd_t)
@@ -93,11 +97,17 @@ corenet_sendrecv_ctdb_server_packets(ctdbd_t)
 corenet_tcp_bind_ctdb_port(ctdbd_t)
 corenet_udp_bind_ctdb_port(ctdbd_t)
 corenet_tcp_bind_smbd_port(ctdbd_t)
+corenet_tcp_bind_all_rpc_ports(ctdbd_t)
+corenet_udp_bind_all_rpc_ports(ctdbd_t)
 corenet_tcp_connect_ctdb_port(ctdbd_t)
 corenet_tcp_sendrecv_ctdb_port(ctdbd_t)
+corenet_tcp_connect_gluster_port(ctdbd_t)
+corenet_tcp_connect_nfs_port(ctdbd_t)
+corenet_tcp_connect_portmap_port(ctdbd_t)
 
 corecmd_exec_bin(ctdbd_t)
 corecmd_exec_shell(ctdbd_t)
+corecmd_getattr_all_executables(ctdbd_t)
 
 dev_read_sysfs(ctdbd_t)
 dev_read_urand(ctdbd_t)
@@ -126,6 +136,12 @@ optional_policy(`
 
 optional_policy(`
 	iptables_domtrans(ctdbd_t)
+')
+
+optional_policy(`
+    rpc_domtrans_rpcd(ctdbd_t)
+    rpc_manage_nfs_state_data_dir(ctdbd_t)
+    rpc_read_nfs_state_data(ctdbd_t)
 ')
 
 optional_policy(`

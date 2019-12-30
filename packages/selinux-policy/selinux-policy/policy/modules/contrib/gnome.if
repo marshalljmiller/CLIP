@@ -108,6 +108,8 @@ template(`gnome_role_template',`
 	# Gkeyringd policy
 	#
 
+    allow $1_gkeyringd_t $3:unix_stream_socket { connectto create_stream_socket_perms };
+
 	domtrans_pattern($3, gkeyringd_exec_t, $1_gkeyringd_t)
 
 	allow $3 { gnome_home_type gkeyringd_tmp_t gconf_tmp_t }:dir { relabel_dir_perms manage_dir_perms };
@@ -125,7 +127,6 @@ template(`gnome_role_template',`
 	allow $3 $1_gkeyringd_t:fd use;
 	allow $3 $1_gkeyringd_t:fifo_file rw_fifo_file_perms;
 
-	dontaudit $1_gkeyringd_t $3:unix_stream_socket { getattr read write };
 	stream_connect_pattern($3, gkeyringd_tmp_t, gkeyringd_tmp_t, $1_gkeyringd_t)
 
 	kernel_read_system_state($1_gkeyringd_t)
@@ -141,11 +142,14 @@ template(`gnome_role_template',`
 
 	logging_send_syslog_msg($1_gkeyringd_t)
 
+    userdom_rw_user_tmp_sock_files($1_gkeyringd_t)
+
 	allow $1_gkeyringd_t $3:dbus send_msg;
 	allow $3 $1_gkeyringd_t:dbus send_msg;
 
 	optional_policy(`
         dbus_session_domain($1, gkeyringd_exec_t, $1_gkeyringd_t)
+        dbus_dontaudit_stream_connect_system_dbusd($1_gkeyringd_t)
 		gnome_manage_generic_home_dirs($1_gkeyringd_t)
 		gnome_read_generic_data_home_files($1_gkeyringd_t)
 		gnome_read_generic_data_home_dirs($1_gkeyringd_t)
@@ -154,7 +158,15 @@ template(`gnome_role_template',`
 			telepathy_mission_control_read_state($1_gkeyringd_t)
             telepathy_gabble_stream_connect_to($1_gkeyringd_t,gkeyringd_tmp_t,gkeyringd_tmp_t)
 		')
+
+        optional_policy(`
+            systemd_dbus_chat_logind($1_gkeyringd_t)
+        ')
 	')
+
+    optional_policy(`
+        ssh_agent_exec($1_gkeyringd_t)
+    ')
 ')
 
 #######################################
@@ -336,7 +348,7 @@ interface(`gnome_manage_config',`
 	')
 
 	allow $1 gnome_home_type:dir manage_dir_perms;
-	allow $1 gnome_home_type:file manage_file_perms;
+	allow $1 gnome_home_type:file { manage_file_perms map };
 	allow $1 gnome_home_type:lnk_file manage_lnk_file_perms;
 	allow $1 gnome_home_type:sock_file manage_sock_file_perms;
 	userdom_search_user_home_dirs($1)
@@ -567,6 +579,25 @@ interface(`gnome_manage_generic_cache_files',`
 
 ########################################
 ## <summary>
+##	Delete to generic cache home files (.cache)
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gnome_delete_generic_cache_files',`
+	gen_require(`
+		type cache_home_t;
+	')
+
+	files_search_tmp($1)
+	allow $1 cache_home_t:file unlink;
+')
+
+########################################
+## <summary>
 ##	Manage a sock_file in the generic cache home files (.cache)
 ## </summary>
 ## <param name="domain">
@@ -678,6 +709,25 @@ interface(`gnome_read_generic_data_home_files',`
 	read_lnk_files_pattern($1, { gconf_home_t data_home_t }, data_home_t)
 ')
 
+########################################
+## <summary>
+##	Read generic data home files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`gnome_map_generic_data_home_files',`
+	gen_require(`
+		type data_home_t, gconf_home_t;
+	')
+
+allow $1 data_home_t:file map;
+allow $1 gconf_home_t:file map;
+')
+
 ######################################
 ## <summary>
 ##  Read generic data home dirs.
@@ -735,6 +785,7 @@ interface(`gnome_read_home_icc_data_content',`
 
 	userdom_search_user_home_dirs($1)
 	allow $1 { gconf_home_t data_home_t }:dir search_dir_perms;
+	allow $1 icc_data_home_t:file map;
 	list_dirs_pattern($1, icc_data_home_t, icc_data_home_t)
 	read_files_pattern($1, icc_data_home_t, icc_data_home_t)
 	read_lnk_files_pattern($1, icc_data_home_t, icc_data_home_t)
@@ -1287,6 +1338,7 @@ interface(`gnome_manage_home_config',`
 	')
 
 	manage_files_pattern($1, config_home_t, config_home_t)
+    allow $1 config_home_t:file map;
 ')
 
 #######################################
@@ -1691,7 +1743,6 @@ gen_require(`
 	filetrans_pattern($1, data_home_t,  gkeyringd_gnome_home_t, dir, "keyrings")
 	filetrans_pattern($1, gconf_home_t, data_home_t, dir, "share")
 	filetrans_pattern($1, data_home_t, icc_data_home_t, dir, "icc")
-	filetrans_pattern($1, cache_home_t, cache_home_t, dir, "fontconfig")
 	userdom_user_tmp_filetrans($1, config_home_t, dir, "dconf")
 	gnome_cache_filetrans($1, config_home_t, dir, "dconf")
 	gnome_filetrans_gstreamer_home_content($1)
@@ -1714,6 +1765,44 @@ interface(`gnome_filetrans_config_home_content',`
     ')
 
     gnome_cache_filetrans($1, config_home_t, dir, "dconf")
+')
+
+######################################
+## <summary>
+##  File name transition for generic home content files.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+interface(`gnome_filetrans_cert_home_content',`
+    gen_require(`
+            type home_cert_t;
+    ')
+
+    gnome_data_filetrans($1, home_cert_t, dir, "certificates")
+')
+
+######################################
+## <summary>
+##	Create fontconfig directories in the .config and .cache subdirectories
+##	of the user home directory with correct label.
+## </summary>
+## <param name="domain">
+##  <summary>
+##	Domain allowed access.
+##  </summary>
+## </param>
+#
+interface(`gnome_filetrans_fontconfig_home_content',`
+    gen_require(`
+            type user_fonts_config_t, user_fonts_cache_t;
+    ')
+
+    gnome_config_filetrans($1, user_fonts_config_t, dir, "fontconfig")
+    gnome_cache_filetrans($1, user_fonts_cache_t, dir, "fontconfig")
 ')
 
 ########################################

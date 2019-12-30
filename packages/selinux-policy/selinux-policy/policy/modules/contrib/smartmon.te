@@ -33,16 +33,12 @@ ifdef(`enable_mls',`
 	init_ranged_daemon_domain(fsdaemon_t, fsdaemon_exec_t, mls_systemhigh)
 ')
 
-ifdef(`enable_mcs',`
-	init_ranged_daemon_domain(fsdaemon_t, fsdaemon_exec_t, mcs_systemhigh)
-')
-
 ########################################
 #
 # Local policy
 #
 
-allow fsdaemon_t self:capability { dac_override kill setpcap setgid sys_rawio sys_admin };
+allow fsdaemon_t self:capability { dac_read_search dac_override kill setpcap setgid sys_rawio sys_admin };
 dontaudit fsdaemon_t self:capability sys_tty_config;
 allow fsdaemon_t self:process { getcap setcap signal_perms };
 allow fsdaemon_t self:fifo_file rw_fifo_file_perms;
@@ -55,12 +51,16 @@ files_tmp_filetrans(fsdaemon_t, fsdaemon_tmp_t, { file dir })
 manage_files_pattern(fsdaemon_t, fsdaemon_var_run_t, fsdaemon_var_run_t)
 files_pid_filetrans(fsdaemon_t, fsdaemon_var_run_t, file)
 
+manage_dirs_pattern(fsdaemon_t, fsdaemon_var_lib_t, fsdaemon_var_lib_t)
 manage_files_pattern(fsdaemon_t, fsdaemon_var_lib_t, fsdaemon_var_lib_t)
+files_var_lib_filetrans(fsdaemon_t, fsdaemon_var_lib_t, { dir file })
 
 kernel_read_kernel_sysctls(fsdaemon_t)
 kernel_read_network_state(fsdaemon_t)
 kernel_read_software_raid_state(fsdaemon_t)
 kernel_read_system_state(fsdaemon_t)
+
+auth_use_nsswitch(fsdaemon_t)
 
 corecmd_exec_all_executables(fsdaemon_t)
 
@@ -71,6 +71,7 @@ corenet_udp_sendrecv_all_ports(fsdaemon_t)
 
 dev_read_sysfs(fsdaemon_t)
 dev_read_urand(fsdaemon_t)
+dev_read_nvme(fsdaemon_t)
 
 domain_use_interactive_fds(fsdaemon_t)
 
@@ -110,7 +111,8 @@ sysnet_dns_name_resolve(fsdaemon_t)
 
 userdom_dontaudit_use_unpriv_user_fds(fsdaemon_t)
 userdom_dontaudit_search_user_home_dirs(fsdaemon_t)
-userdom_use_user_ptys(fsdaemon_t)
+userdom_dontaudit_manage_admin_dir(fsdaemon_t)
+userdom_use_user_terminals(fsdaemon_t)
 
 tunable_policy(`smartmon_3ware',`
 	allow fsdaemon_t self:process setfscreate;
@@ -126,6 +128,7 @@ tunable_policy(`smartmon_3ware',`
 
 optional_policy(`
 	mta_send_mail(fsdaemon_t)
+    mta_manage_home_rw(fsdaemon_t)
 ')
 
 optional_policy(`

@@ -62,8 +62,15 @@ locallogin_dontaudit_use_fds(oddjob_t)
 
 optional_policy(`
 	dbus_system_bus_client(oddjob_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(oddjob_t)
+	dbus_connect_system_bus(oddjob_t)
+')
+
+optional_policy(`
+	apache_dbus_chat(oddjob_t)
+')
+
+optional_policy(`
+    init_dbus_chat(oddjob_t)
 ')
 
 ########################################
@@ -71,12 +78,14 @@ optional_policy(`
 # oddjob_mkhomedir local policy
 #
 
-allow oddjob_mkhomedir_t self:capability { chown fowner fsetid dac_override };
+allow oddjob_mkhomedir_t self:capability { chown fowner fsetid dac_read_search  dac_override };
 allow oddjob_mkhomedir_t self:process setfscreate;
 allow oddjob_mkhomedir_t self:fifo_file rw_fifo_file_perms;
 allow oddjob_mkhomedir_t self:unix_stream_socket create_stream_socket_perms;
 
 kernel_read_system_state(oddjob_mkhomedir_t)
+
+fs_manage_auto_mountpoints(oddjob_mkhomedir_t)
 
 mls_file_upgrade(oddjob_mkhomedir_t)
 
@@ -102,4 +111,8 @@ userdom_manage_user_home_content_dirs(oddjob_mkhomedir_t)
 userdom_manage_user_home_content(oddjob_mkhomedir_t)
 userdom_home_manager(oddjob_mkhomedir_t)
 userdom_stream_connect(oddjob_mkhomedir_t)
+
+optional_policy(`
+    dbus_system_bus_client(oddjob_mkhomedir_t)
+')
 

@@ -31,7 +31,7 @@ ifdef(`enable_mcs',`
 ')
 
 ifdef(`enable_mls',`
-	init_ranged_daemon_domain(sulogin_t, sulogin_exec_t, mls_systemhigh)
+	init_ranged_daemon_domain(sulogin_t, sulogin_exec_t, s0 - mls_systemhigh)
 ')
 
 ########################################
@@ -39,8 +39,8 @@ ifdef(`enable_mls',`
 # Local login local policy
 #
 
-allow local_login_t self:capability { dac_override chown fowner fsetid kill setgid setuid sys_admin sys_nice sys_resource sys_tty_config };
-allow local_login_t self:process ~{ ptrace setcurrent execmem execstack execheap };
+allow local_login_t self:capability { dac_read_search dac_override chown fowner fsetid kill setgid setuid sys_admin sys_nice sys_resource sys_tty_config };
+allow local_login_t self:process ~{ ptrace setcurrent setfscreate execmem execstack execheap };
 allow local_login_t self:fd use;
 allow local_login_t self:fifo_file rw_fifo_file_perms;
 allow local_login_t self:sock_file read_sock_file_perms;
@@ -109,6 +109,7 @@ files_read_world_readable_pipes(local_login_t)
 files_read_world_readable_sockets(local_login_t)
 # for when /var/mail is a symlink
 files_read_var_symlinks(local_login_t)
+files_create_home_dir(local_login_t)
 
 fs_search_auto_mountpoints(local_login_t)
 
@@ -123,8 +124,10 @@ term_relabel_unallocated_ttys(local_login_t)
 term_relabel_all_ttys(local_login_t)
 term_setattr_all_ttys(local_login_t)
 term_setattr_unallocated_ttys(local_login_t)
+term_use_usb_ttys(local_login_t)
+term_use_all_ptys(local_login_t)
 term_relabel_all_ptys(local_login_t)
-term_setattr_generic_ptys(local_login_t)
+term_setattr_all_ptys(local_login_t)
 
 auth_rw_login_records(local_login_t)
 auth_rw_faillog(local_login_t)
@@ -135,14 +138,7 @@ auth_use_nsswitch(local_login_t)
 init_dontaudit_use_fds(local_login_t)
 init_stream_connect(local_login_t)
 
-auth_dontaudit_manage_shadow(local_login_t)
-auth_dontaudit_manage_passwd(local_login_t)
-
-# SRS: SCAP content forces tracking of old passwords
-# No clue why login itself is doing this intead of updpwd
-# b/c both need manage perms on this for password updates
-# to work.
-auth_read_oshadow(local_login_t)
+udev_read_db(local_login_t)
 
 userdom_spec_domtrans_all_users(local_login_t)
 userdom_signal_all_users(local_login_t)
@@ -176,6 +172,7 @@ optional_policy(`
 	dbus_system_bus_client(local_login_t)
 
 	consolekit_dbus_chat(local_login_t)
+    snapper_dbus_chat(local_login_t)
 ')
 
 optional_policy(`
@@ -186,6 +183,10 @@ optional_policy(`
 optional_policy(`
 	# Search for mail spool file.
 	mta_getattr_spool(local_login_t)
+')
+
+optional_policy(`
+	udev_read_db(local_login_t)
 ')
 
 optional_policy(`
@@ -207,7 +208,7 @@ optional_policy(`
 # Sulogin local policy
 #
 
-allow sulogin_t self:capability { dac_override sys_admin };
+allow sulogin_t self:capability { dac_read_search  sys_admin };
 allow sulogin_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 allow sulogin_t self:fd use;
 allow sulogin_t self:fifo_file rw_fifo_file_perms;

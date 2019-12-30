@@ -22,6 +22,9 @@ type pkcs_slotd_lock_t;
 typealias pkcs_slotd_lock_t alias pkcsslotd_lock_t;
 files_lock_file(pkcs_slotd_lock_t)
 
+type pkcs_slotd_log_t;
+logging_log_file(pkcs_slotd_log_t)
+
 type pkcs_slotd_var_run_t;
 typealias pkcs_slotd_var_run_t alias pkcsslotd_var_run_t;
 files_pid_file(pkcs_slotd_var_run_t)
@@ -33,6 +36,9 @@ files_tmp_file(pkcs_slotd_tmp_t)
 type pkcs_slotd_tmpfs_t;
 typealias pkcs_slotd_tmpfs_t alias pkcsslotd_tmpfs_t;
 files_tmpfs_file(pkcs_slotd_tmpfs_t)
+
+type pkcs_slotd_unit_file_t;
+systemd_unit_file(pkcs_slotd_unit_file_t)
 
 ########################################
 #
@@ -51,6 +57,12 @@ manage_lnk_files_pattern(pkcs_slotd_t, pkcs_slotd_var_lib_t, pkcs_slotd_var_lib_
 files_var_lib_filetrans(pkcs_slotd_t, pkcs_slotd_var_lib_t, dir)
 
 manage_files_pattern(pkcs_slotd_t, pkcs_slotd_lock_t, pkcs_slotd_lock_t)
+manage_dirs_pattern(pkcs_slotd_t, pkcs_slotd_lock_t, pkcs_slotd_lock_t)
+files_lock_filetrans(pkcs_slotd_t, pkcs_slotd_lock_t, dir)
+
+manage_files_pattern(pkcs_slotd_t, pkcs_slotd_log_t, pkcs_slotd_log_t)
+manage_dirs_pattern(pkcs_slotd_t, pkcs_slotd_log_t, pkcs_slotd_log_t)
+logging_log_filetrans(pkcs_slotd_t, pkcs_slotd_log_t, dir)
 
 manage_dirs_pattern(pkcs_slotd_t, pkcs_slotd_var_run_t, pkcs_slotd_var_run_t)
 manage_files_pattern(pkcs_slotd_t, pkcs_slotd_var_run_t, pkcs_slotd_var_run_t)
@@ -65,7 +77,7 @@ manage_dirs_pattern(pkcs_slotd_t, pkcs_slotd_tmpfs_t, pkcs_slotd_tmpfs_t)
 manage_files_pattern(pkcs_slotd_t, pkcs_slotd_tmpfs_t, pkcs_slotd_tmpfs_t)
 fs_tmpfs_filetrans(pkcs_slotd_t, pkcs_slotd_tmpfs_t, { file dir })
 
-auth_read_passwd(pkcs_slotd_t)
+auth_use_nsswitch(pkcs_slotd_t)
 
 files_search_locks(pkcs_slotd_t)
 

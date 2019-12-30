@@ -32,6 +32,7 @@ manage_lnk_files_pattern(bumblebee_t, bumblebee_var_run_t, bumblebee_var_run_t)
 files_pid_filetrans(bumblebee_t, bumblebee_var_run_t, { dir file lnk_file sock_file })
 
 kernel_read_system_state(bumblebee_t)
+kernel_read_network_state(bumblebee_t)
 kernel_dontaudit_access_check_proc(bumblebee_t)
 kernel_dontaudit_write_proc_files(bumblebee_t)
 kernel_manage_debugfs(bumblebee_t)
@@ -45,12 +46,13 @@ auth_use_nsswitch(bumblebee_t)
 
 logging_send_syslog_msg(bumblebee_t)
 
-modutils_domtrans_insmod(bumblebee_t)
-modutils_signal_insmod(bumblebee_t)
+modutils_domtrans_kmod(bumblebee_t)
+modutils_signal_kmod(bumblebee_t)
 
 sysnet_dns_name_resolve(bumblebee_t)
 
 xserver_domtrans(bumblebee_t)
+xserver_kill(bumblebee_t)
 xserver_signal(bumblebee_t)
 xserver_stream_connect(bumblebee_t)
 xserver_manage_xkb_libs(bumblebee_t)

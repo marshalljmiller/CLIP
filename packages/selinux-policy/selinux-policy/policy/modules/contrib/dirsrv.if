@@ -18,6 +18,30 @@ interface(`dirsrv_domtrans',`
 	domtrans_pattern($1, dirsrv_exec_t,dirsrv_t)
 ')
 
+########################################
+## <summary>
+##	Execute dirsrv in the dirsrv domain, and
+##	allow the specified role the dirsrv domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role allowed access.
+##	</summary>
+## </param>
+#
+interface(`dirsrv_run',`
+	gen_require(`
+		type dirsrv_t;
+	')
+
+	dirsrv_domtrans($1)
+	role $2 types dirsrv_t;
+')
 
 ########################################
 ## <summary>
@@ -203,6 +227,24 @@ interface(`dirsrv_read_share',`
 	')
 
 	allow $1 dirsrv_share_t:dir list_dir_perms;
-	allow $1 dirsrv_share_t:file read_file_perms;
+	allow $1 dirsrv_share_t:file { map read_file_perms };
 	allow $1 dirsrv_share_t:lnk_file read;
+')
+
+########################################
+## <summary>
+##	Allow dirsrv noatsecure
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dirsrv_noatsecure',`
+	gen_require(`
+		type dirsrv_t;
+	')
+
+    allow $1 dirsrv_t:process { noatsecure };
 ')

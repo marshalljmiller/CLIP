@@ -253,10 +253,10 @@ interface(`xserver_user_client',`
 	xserver_read_xdm_tmp_files($1)
 
 	# Client write xserver shm
-	#tunable_policy(`xserver_clients_write_xshm',`
-	#	allow $1 xserver_t:shm rw_shm_perms;
-	#	allow $1 xserver_tmpfs_t:file rw_file_perms;
-	#')
+	tunable_policy(`xserver_clients_write_xshm',`
+		allow $1 xserver_t:shm rw_shm_perms;
+		allow $1 xserver_tmpfs_t:file rw_file_perms;
+	')
 ')
 
 #######################################
@@ -437,14 +437,14 @@ template(`xserver_user_x_domain_template',`
 	xserver_common_x_domain_template($1, $2)
 
 	# Client write xserver shm
-	#tunable_policy(`xserver_clients_write_xshm',`
-	#	allow $2 xserver_t:shm rw_shm_perms;
-	#	allow $2 xserver_tmpfs_t:file rw_file_perms;
-	#')
+	tunable_policy(`xserver_clients_write_xshm',`
+		allow $2 xserver_t:shm rw_shm_perms;
+		allow $2 xserver_tmpfs_t:file rw_file_perms;
+	')
 
-	#tunable_policy(`selinuxuser_direct_dri_enabled',`
-	#	dev_rw_dri($2)
-	#')
+	tunable_policy(`selinuxuser_direct_dri_enabled',`
+		dev_rw_dri($2)
+	')
 ')
 
 ########################################
@@ -488,6 +488,25 @@ interface(`xserver_use_user_fonts',`
 
 	userdom_search_user_home_dirs($1)
 ')
+
+########################################
+## <summary>
+##	Transition to the Xauthority domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`xserver_domtrans_xdm',`
+	gen_require(`
+		type xdm_t, xdm_exec_t;
+	')
+
+	domtrans_pattern($1, xdm_exec_t, xdm_t)
+')
+
 
 ########################################
 ## <summary>
@@ -861,7 +880,6 @@ interface(`xserver_read_xdm_home_files',`
 	')
 
 	userdom_search_user_home_dirs($1)
-	allow $1 xdm_home_t:dir search;
 	allow $1 xdm_home_t:file read_file_perms;
 ')
 
@@ -1004,6 +1022,24 @@ interface(`xserver_read_xdm_pid',`
 	read_files_pattern($1, xdm_var_run_t, xdm_var_run_t)
 ')
 
+########################################
+## <summary>
+##	Mmap XDM pid files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`xserver_map_xdm_pid',`
+	gen_require(`
+		type xdm_var_run_t;
+	')
+
+	allow $1 xdm_var_run_t:file map;
+')
+
 ######################################
 ## <summary>
 ##  Dontaudit Read XDM pid files.
@@ -1057,7 +1093,7 @@ interface(`xserver_read_inherited_xdm_lib_files',`
 		type xdm_var_lib_t;
 	')
 
-	allow $1 xdm_var_lib_t:file read_inherited_file_perms;
+	allow $1 xdm_var_lib_t:file { read_inherited_file_perms map };
 ')
 
 ########################################
@@ -1394,8 +1430,8 @@ interface(`xserver_manage_xdm_tmp_dirs',`
 ## </param>
 #
 interface(`xserver_dontaudit_getattr_xdm_tmp_sockets',`
-    refpolicywarn(`$0() has been deprecated, please use usedom_dontaudit_user_getattr_tmp_sockets instead.')
-    usedom_dontaudit_user_getattr_tmp_sockets($1)
+    refpolicywarn(`$0() has been deprecated, please use userdom_dontaudit_user_getattr_tmp_sockets instead.')
+    userdom_dontaudit_user_getattr_tmp_sockets($1)
 ')
 
 ########################################
@@ -1421,6 +1457,44 @@ interface(`xserver_domtrans',`
 
 ########################################
 ## <summary>
+##	Allow SELinux Domain trasition
+##  into confined domain with NoNewPrivileges
+##  Systemd Security feature.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`xserver_nnp_daemon_domain',`
+    gen_require(`
+        type xserver_t;
+    ')
+
+    allow $1 xserver_t:process2 { nnp_transition nosuid_transition };
+')
+
+########################################
+## <summary>
+##	Allow execute the X server.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`xserver_exec',`
+	gen_require(`
+		type xserver_exec_t;
+	')
+
+	can_exec($1, xserver_exec_t)
+')
+
+########################################
+## <summary>
 ##	Signal X servers
 ## </summary>
 ## <param name="domain">
@@ -1435,6 +1509,24 @@ interface(`xserver_signal',`
 	')
 
 	allow $1 xserver_t:process signal;
+')
+
+########################################
+## <summary>
+##	Send a null signal to xdm processes.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`xserver_xdm_signull',`
+	gen_require(`
+		type xdm_t;
+	')
+
+	allow $1 xdm_t:process signull;
 ')
 
 ########################################
@@ -2011,6 +2103,7 @@ interface(`xserver_run',`
 	')
 
 	xserver_domtrans($1)
+    xserver_nnp_daemon_domain($1)
 	role $2 types xserver_t;
 ')
 
@@ -2157,6 +2250,7 @@ interface(`xserver_filetrans_home_content',`
 	userdom_user_home_dir_filetrans($1, xauth_home_t, file, ".xauth")
 	userdom_user_home_dir_filetrans($1, xauth_home_t, file, ".Xauth")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors")
+	userdom_user_home_dir_filetrans($1, xdm_home_t, file, "xsession-errors")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:0")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:1")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:2")
@@ -2169,6 +2263,8 @@ interface(`xserver_filetrans_home_content',`
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:9")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-stamped")
 	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-stamped.old")
+	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".wayland-errors")
+	userdom_user_home_dir_filetrans($1, xdm_home_t, file, ".vnc")
 	userdom_user_home_dir_filetrans($1, user_fonts_config_t, file, ".fonts.conf")
 	userdom_user_home_dir_filetrans($1, user_fonts_config_t, dir, ".fonts.d")
 	userdom_user_home_dir_filetrans($1, user_fonts_t, dir, ".fonts")
@@ -2199,6 +2295,7 @@ interface(`xserver_filetrans_admin_home_content',`
 	')
 
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".dmrc")
+	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, "xsession-errors")
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors")
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:0")
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-:1")
@@ -2213,6 +2310,8 @@ interface(`xserver_filetrans_admin_home_content',`
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-stamped")
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors-stamped.old")
 	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".xsession-errors.old")
+	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".wayland-errors")
+	userdom_admin_home_dir_filetrans($1, xdm_home_t, file, ".vnc")
 	userdom_admin_home_dir_filetrans($1, iceauth_home_t, file, ".DCOP")
 	userdom_admin_home_dir_filetrans($1, iceauth_home_t, file, ".ICEauthority")
 	userdom_admin_home_dir_filetrans($1, xauth_home_t, file, ".Xauthority")

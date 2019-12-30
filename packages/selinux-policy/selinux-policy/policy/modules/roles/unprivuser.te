@@ -62,6 +62,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    dirsrv_stream_connect(user_t)
+')
+
+optional_policy(`
 	journalctl_role(user_r, user_t)
 ')
 
@@ -72,6 +76,10 @@ optional_policy(`
 optional_policy(`
 	oident_manage_user_content(user_t)
 	oident_relabel_user_content(user_t)
+')
+
+optional_policy(`
+    mandb_map_cache_files(user_t)
 ')
 
 optional_policy(`
@@ -99,6 +107,11 @@ optional_policy(`
 
 optional_policy(`
 	rtkit_scheduled(user_t)
+')
+
+optional_policy(`
+	systemd_read_unit_files(user_t)
+	systemd_exec_systemctl(user_t)
 ')
 
 optional_policy(`
@@ -256,6 +269,10 @@ ifndef(`distro_redhat',`
 	optional_policy(`
 		wireshark_role(user_r, user_t)
 	')
+
+	optional_policy(`
+		xserver_run(user_t, user_r)
+	')
 ')
 
 optional_policy(`
@@ -272,9 +289,4 @@ optional_policy(`
 	tunable_policy(`unprivuser_use_svirt',`
 		virt_manage_images(user_t)
 	')
-')
-
-optional_policy(`
-        xserver_role(user_r, user_t)
-        miscfiles_map_fonts(user_t)
 ')

@@ -1,5 +1,41 @@
 ## <summary>Policy for logical volume management programs.</summary>
 
+
+#####################################
+## <summary>
+##  lvm stub domain interface.  No access allowed.
+## </summary>
+## <param name="domain" unused="true">
+##  <summary>
+##  Domain allowed access
+##  </summary>
+## </param>
+#
+interface(`lvm_stub',`
+    gen_require(`
+        type lvm_t;
+    ')
+')
+
+########################################
+## <summary>
+##	Get the attribute of lvm entrypoint files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`lvm_getattr_exec_files',`
+	gen_require(`
+		type lvm_exec_t;
+	')
+
+	files_list_etc($1)
+	allow $1 lvm_exec_t:file getattr;
+')
+
 ########################################
 ## <summary>
 ##	Execute lvm programs in the lvm domain.
@@ -86,6 +122,25 @@ interface(`lvm_read_config',`
 
 ########################################
 ## <summary>
+##	Mmap LVM configuration files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`lvm_map_config',`
+	gen_require(`
+		type lvm_etc_t;
+	')
+
+	allow $1 lvm_etc_t:file map;
+')
+
+########################################
+## <summary>
 ##	Read LVM configuration files.
 ## </summary>
 ## <param name="domain">
@@ -130,6 +185,27 @@ interface(`lvm_write_metadata',`
 
 ########################################
 ## <summary>
+##	Manage LVM metadata files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`lvm_manage_metadata',`
+	gen_require(`
+		type lvm_metadata_t;
+	')
+
+	allow $1 lvm_metadata_t:dir list_dir_perms;
+	manage_dirs_pattern($1, lvm_metadata_t, lvm_metadata_t)
+	manage_files_pattern($1, lvm_metadata_t, lvm_metadata_t)
+')
+
+########################################
+## <summary>
 ##	Manage LVM configuration files.
 ## </summary>
 ## <param name="domain">
@@ -147,6 +223,25 @@ interface(`lvm_manage_config',`
 	files_search_etc($1)
 	manage_dirs_pattern($1, lvm_etc_t, lvm_etc_t)
 	manage_files_pattern($1, lvm_etc_t, lvm_etc_t)
+')
+
+########################################
+## <summary>
+##	Connect to lvm using a unix domain stream socket.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`lvm_stream_connect',`
+	gen_require(`
+		type lvm_t, lvm_var_run_t;
+	')
+
+	files_search_pids($1)
+	stream_connect_pattern($1, lvm_var_run_t, lvm_var_run_t, lvm_t)
 ')
 
 ######################################
@@ -256,8 +351,27 @@ interface(`lvm_rw_pipes',`
 		type lvm_var_run_t;
 	')
 
-	allow $1 lvm_var_run_t:fifo_file rw_inherited_fifo_file_perms;
+	allow $1 lvm_var_run_t:fifo_file rw_fifo_file_perms;
 ')
+
+########################################
+## <summary>
+##	Dontaudit Read and write a lvm unnamed pipe.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`lvm_dontaudit_rw_pipes',`
+	gen_require(`
+		type lvm_var_run_t;
+	')
+
+	dontaudit $1 lvm_var_run_t:fifo_file rw_fifo_file_perms;
+')
+
 
 ########################################
 ## <summary>
@@ -275,6 +389,24 @@ interface(`lvm_dontaudit_access_check_lock',`
 	')
 
     dontaudit $1 lvm_lock_t:dir audit_access;
+')
+
+########################################
+## <summary>
+##	Dontaudit read and write to lvm_lock_t dir.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`lvm_dontaudit_rw_lock_dir',`
+	gen_require(`
+		type lvm_lock_t;
+	')
+
+	dontaudit $1 lvm_lock_t:dir rw_file_perms;
 ')
 
 ########################################
@@ -297,19 +429,27 @@ interface(`lvm_read_state',`
 
 ########################################
 ## <summary>
-##      Mmap LVM configuration files.
+##	Create, read, write, and delete
+##	lvm lock files.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
-## <rolecap/>
 #
-interface(`lvm_map_config',`
-        gen_require(`
-                type lvm_etc_t;
-        ')
+interface(`lvm_manage_lock',`
+	gen_require(`
+		type lvm_lock_t;
+	')
 
-        allow $1 lvm_etc_t:file map;
+    files_lock_filetrans($1, lvm_lock_t, dir, "lvm")
+
+    files_search_locks($1)
+    manage_files_pattern($1, lvm_lock_t, lvm_lock_t)
+    manage_dirs_pattern($1, lvm_lock_t, lvm_lock_t)
+
 ')
+
+
+

@@ -50,20 +50,14 @@ dev_read_sysfs(policykit_domain)
 # policykit local policy
 #
 
-allow policykit_t self:capability { dac_override dac_read_search setgid setuid sys_nice sys_ptrace };
+allow policykit_t self:capability {  dac_read_search setgid setuid sys_nice sys_ptrace };
 allow policykit_t self:process { getsched setsched signal };
 allow policykit_t self:unix_dgram_socket create_socket_perms;
 allow policykit_t self:unix_stream_socket { create_stream_socket_perms connectto };
 
-optional_policy(`
-    gen_require(`
-        class dbus acquire_svc;
-    ')
-    # Allow policykit_t to listen on org.freedesktop.PolicyKit1
-    allow policykit_t self:dbus acquire_svc;
-')
-
 policykit_domtrans_auth(policykit_t)
+allow policykit_t policykit_auth_exec_t:file map;
+
 allow policykit_t policykit_auth_t:process signal;
 
 can_exec(policykit_t, policykit_exec_t)
@@ -100,19 +94,27 @@ logging_send_syslog_msg(policykit_t)
 
 systemd_machined_read_pid_files(policykit_t)
 
-optional_policy(`
-	userdom_getattr_all_users(policykit_t)
-	userdom_read_all_users_state(policykit_t)
-	userdom_dontaudit_search_admin_dir(policykit_t)
-')
+userdom_getattr_all_users(policykit_t)
+userdom_read_all_users_state(policykit_t)
+userdom_dontaudit_search_admin_dir(policykit_t)
 
 optional_policy(`
 	dbus_system_domain(policykit_t, policykit_exec_t)
 
 	init_dbus_chat(policykit_t)
 
+    sysnet_dbus_chat_dhcpc(policykit_t)
+
+    optional_policy(`
+        blueman_dbus_chat(policykit_t)
+    ')
+
 	optional_policy(`
 		consolekit_dbus_chat(policykit_t)
+	')
+
+	optional_policy(`
+		devicekit_dbus_chat(policykit_t)
 	')
 
 	optional_policy(`
@@ -145,7 +147,7 @@ optional_policy(`
 # polkit_auth local policy
 #
 
-allow policykit_auth_t self:capability { sys_nice ipc_lock setgid setuid dac_override };
+allow policykit_auth_t self:capability { sys_nice ipc_lock setgid setuid };
 dontaudit policykit_auth_t self:capability sys_tty_config;
 allow policykit_auth_t self:process { setsched getsched signal };
 
@@ -174,6 +176,7 @@ files_pid_filetrans(policykit_auth_t, policykit_var_run_t, { file dir })
 kernel_dontaudit_search_kernel_sysctl(policykit_auth_t)
 
 dev_read_video_dev(policykit_auth_t)
+dev_read_generic_usb_dev(policykit_auth_t)
 
 files_read_etc_runtime_files(policykit_auth_t)
 files_search_home(policykit_auth_t)
@@ -186,16 +189,6 @@ fs_dontaudit_append_ecryptfs_files(policykit_auth_t)
 auth_rw_var_auth(policykit_auth_t)
 auth_use_nsswitch(policykit_auth_t)
 auth_domtrans_chk_passwd(policykit_auth_t)
-# SRS: for some reason, even though it seems to trans to chkpwd_t
-# it still requires direct shadow_t access, even though the polkit
-# pam config points to system-auth so it should act "normal"
-#
-# i believe that in standard targeted this stuff is 
-# taking different code paths as there are basically no
-# rules for polkit<->unconfined and in our policy there 
-# are a ton governing the relationship
-# 
-auth_read_shadow(policykit_auth_t)
 
 logging_send_syslog_msg(policykit_auth_t)
 
@@ -206,7 +199,6 @@ userdom_dontaudit_read_user_home_content_files(policykit_auth_t)
 userdom_dontaudit_write_user_tmp_files(policykit_auth_t)
 userdom_dontaudit_access_check_user_content(policykit_auth_t)
 userdom_read_admin_home_files(policykit_auth_t)
-userdom_use_inherited_user_ttys(policykit_auth_t)
 
 optional_policy(`
 	dbus_system_domain( policykit_auth_t, policykit_auth_exec_t)
@@ -230,6 +222,10 @@ optional_policy(`
 optional_policy(`
 	kerberos_tmp_filetrans_host_rcache(policykit_auth_t, "host_0")
         kerberos_manage_host_rcache(policykit_auth_t)
+')
+
+optional_policy(`
+    udev_read_db(policykit_auth_t)
 ')
 
 optional_policy(`

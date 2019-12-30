@@ -2087,6 +2087,24 @@ interface(`dev_setattr_dri_dev',`
 
 ########################################
 ## <summary>
+##	Mmap the dri devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_dri',`
+	gen_require(`
+		type device_t, dri_device_t;
+	')
+
+	allow $1 dri_device_t:chr_file map;
+')
+
+########################################
+## <summary>
 ##	Read and write the dri devices.
 ## </summary>
 ## <param name="domain">
@@ -2101,7 +2119,7 @@ interface(`dev_rw_dri',`
 	')
 
 	rw_chr_files_pattern($1, device_t, dri_device_t)
-        allow $1 dri_device_t:chr_file map;
+	allow $1 dri_device_t:chr_file map;
 ')
 
 ########################################
@@ -2314,6 +2332,49 @@ interface(`dev_rw_ipmi_dev',`
 
 ########################################
 ## <summary>
+##	Manage ipmi devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_manage_ipmi_dev',`
+	gen_require(`
+		type device_t, ipmi_device_t;
+	')
+
+	manage_chr_files_pattern($1, device_t, ipmi_device_t)
+')
+
+########################################
+## <summary>
+##	Automatic type transition to the type
+##	for PCMCIA card manager device nodes when
+##	created in /dev.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <param name="name" optional="true">
+##	<summary>
+##	The name of the object being created.
+##	</summary>
+## </param>
+#
+interface(`dev_filetrans_ipmi',`
+	gen_require(`
+		type device_t, ipmi_device_t;
+	')
+
+	filetrans_pattern($1, device_t, ipmi_device_t, chr_file, $2)
+')
+
+########################################
+## <summary>
 ##	Read infiniband devices.
 ## </summary>
 ## <param name="domain">
@@ -2348,7 +2409,45 @@ interface(`dev_rw_infiniband_dev',`
 
 	rw_chr_files_pattern($1, device_t, infiniband_device_t)
     rw_blk_files_pattern($1, device_t, infiniband_device_t)
-	        allow $1 infiniband_device_t:chr_file map;
+	allow $1 infiniband_device_t:chr_file map;
+')
+
+########################################
+## <summary>
+##	Read infiniband mgmt devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_read_infiniband_mgmt_dev',`
+	gen_require(`
+		type device_t, infiniband_mgmt_device_t;
+	')
+
+	read_chr_files_pattern($1, device_t, infiniband_mgmt_device_t)
+    read_blk_files_pattern($1, device_t, infiniband_mgmt_device_t)
+')
+
+########################################
+## <summary>
+##	Read and write ipmi devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_infiniband_mgmt_dev',`
+	gen_require(`
+		type device_t, infiniband_mgmt_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, infiniband_mgmt_device_t)
+    rw_blk_files_pattern($1, device_t, infiniband_mgmt_device_t)
 ')
 
 ########################################
@@ -2458,6 +2557,24 @@ interface(`dev_write_framebuffer',`
 	')
 
 	write_chr_files_pattern($1, device_t, framebuf_device_t)
+')
+
+########################################
+## <summary>
+##	Mmap the framebuffer.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_framebuffer',`
+	gen_require(`
+		type framebuf_device_t;
+	')
+
+	allow $1 framebuf_device_t:chr_file map;
 ')
 
 ########################################
@@ -2674,6 +2791,24 @@ interface(`dev_rw_kvm',`
 	')
 
 	rw_chr_files_pattern($1, device_t, kvm_device_t)
+')
+
+########################################
+## <summary>
+##	Read and write to sev devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_sev',`
+	gen_require(`
+		type device_t, sev_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, sev_device_t)
 ')
 
 ######################################
@@ -2959,6 +3094,24 @@ interface(`dev_read_raw_memory',`
 
 ########################################
 ## <summary>
+##	Allow to be reader of raw memory devices (e.g. /dev/mem).
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_raw_memory_reader',`
+	gen_require(`
+		attribute memory_raw_read;
+	')
+
+	typeattribute $1 memory_raw_read;
+')
+
+########################################
+## <summary>
 ##	Do not audit attempts to read raw memory devices
 ##	(e.g. /dev/mem).
 ## </summary>
@@ -2995,6 +3148,24 @@ interface(`dev_write_raw_memory',`
 	write_chr_files_pattern($1, device_t, memory_device_t)
 
 	allow $1 self:capability sys_rawio;
+	typeattribute $1 memory_raw_write;
+')
+
+########################################
+## <summary>
+##	Allow to be writer of raw memory devices (e.g. /dev/mem).
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_raw_memory_writer',`
+	gen_require(`
+		attribute memory_raw_write;
+	')
+
 	typeattribute $1 memory_raw_write;
 ')
 
@@ -3471,6 +3642,25 @@ interface(`dev_dontaudit_read_mtrr',`
 
 ########################################
 ## <summary>
+##	Read the memory type range registers (MTRR).
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_read_mtrr',`
+	gen_require(`
+		type device_t, mtrr_device_t;
+	')
+
+	read_files_pattern($1, device_t, mtrr_device_t)
+	read_chr_files_pattern($1, device_t, mtrr_device_t)
+')
+
+########################################
+## <summary>
 ##	Read and write the memory type range registers (MTRR).
 ## </summary>
 ## <param name="domain">
@@ -3666,6 +3856,44 @@ interface(`dev_config_null_dev_service',`
 	')
 
 	allow $1 null_device_t:service manage_service_perms;
+')
+
+########################################
+## <summary>
+##	Read Non-Volatile Memory Host Controller Interface.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_read_nvme',`
+	gen_require(`
+		type nvme_device_t;
+	')
+
+	read_chr_files_pattern($1, device_t, nvme_device_t)
+	read_blk_files_pattern($1, device_t, nvme_device_t)
+')
+
+########################################
+## <summary>
+##	Read/Write Non-Volatile Memory Host Controller Interface.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_nvme',`
+	gen_require(`
+		type nvme_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, nvme_device_t)
+	rw_blk_files_pattern($1, device_t, nvme_device_t)
 ')
 
 ########################################
@@ -4196,7 +4424,7 @@ interface(`dev_read_sound',`
 	')
 
 	read_chr_files_pattern($1, device_t, sound_device_t)
-        allow $1 sound_device_t:chr_file map;
+	allow $1 sound_device_t:chr_file map;
 ')
 
 ########################################
@@ -4233,7 +4461,7 @@ interface(`dev_read_sound_mixer',`
 	')
 
 	read_chr_files_pattern($1, device_t, sound_device_t)
-	        allow $1 sound_device_t:chr_file map;
+	allow $1 sound_device_t:chr_file map;
 ')
 
 ########################################
@@ -4474,6 +4702,24 @@ interface(`dev_mounton_sysfs',`
 
 ########################################
 ## <summary>
+##	Dontaudit attempts to mount a filesystem on /sys
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`dev_dontaudit_mounton_sysfs',`
+	gen_require(`
+		type sysfs_t;
+	')
+
+	dontaudit $1 sysfs_t:dir mounton;
+')
+
+########################################
+## <summary>
 ##	Mount sysfs filesystems.
 ## </summary>
 ## <param name="domain">
@@ -4580,6 +4826,24 @@ interface(`dev_write_sysfs_dirs',`
 	')
 
 	allow $1 sysfs_t:dir write;
+')
+
+########################################
+## <summary>
+##	Access check for a sysfs directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_access_check_sysfs',`
+	gen_require(`
+		type sysfs_t;
+	')
+
+	allow $1 sysfs_t:dir audit_access;
 ')
 
 ########################################
@@ -4750,6 +5014,43 @@ interface(`dev_manage_sysfs_dirs',`
 	')
 
 	manage_dirs_pattern($1, sysfs_t, sysfs_t)
+')
+
+########################################
+## <summary>
+##	Allow caller to modify hardware state information.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_manage_sysfs',`
+	gen_require(`
+		type sysfs_t;
+	')
+
+	manage_dirs_pattern($1, sysfs_t, sysfs_t)
+	manage_files_pattern($1, sysfs_t, sysfs_t)
+')
+
+########################################
+## <summary>
+##	Mmap the sysfs.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_sysfs',`
+	gen_require(`
+		type sysfs_t;
+	')
+
+	allow $1 sysfs_t:file map;
 ')
 
 ########################################
@@ -4978,6 +5279,24 @@ interface(`dev_read_usbmon_dev',`
 
 ########################################
 ## <summary>
+##	Mmap USB monitor devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_usbmon_dev',`
+	gen_require(`
+		type usbmon_device_t;
+	')
+
+	allow $1 usbmon_device_t:chr_file map;
+')
+
+########################################
+## <summary>
 ##	Write USB monitor devices.
 ## </summary>
 ## <param name="domain">
@@ -5186,6 +5505,24 @@ interface(`dev_rw_userio_dev',`
 
 ########################################
 ## <summary>
+##	Mmap the userio devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_userio_dev',`
+	gen_require(`
+		type device_t, userio_device_t;
+	')
+
+	allow $1 userio_device_t:chr_file map;
+')
+
+########################################
+## <summary>
 ##	Get the attributes of video4linux devices.
 ## </summary>
 ## <param name="domain">
@@ -5274,6 +5611,25 @@ interface(`dev_read_video_dev',`
 	')
 
 	read_chr_files_pattern($1, device_t, v4l_device_t)
+')
+
+########################################
+## <summary>
+##	Mmap the video4linux devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_video_dev',`
+	gen_require(`
+		type device_t, v4l_device_t;
+	')
+
+	allow $1 v4l_device_t:chr_file map;
+
 ')
 
 ########################################
@@ -5533,6 +5889,24 @@ interface(`dev_write_watchdog',`
 
 ########################################
 ## <summary>
+##	RW to watchdog devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_watchdog',`
+	gen_require(`
+		type device_t, watchdog_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, watchdog_device_t)
+')
+
+########################################
+## <summary>
 ##	Read and write the the wireless device.
 ## </summary>
 ## <param name="domain">
@@ -5565,6 +5939,7 @@ interface(`dev_rw_xen',`
 	')
 
 	rw_chr_files_pattern($1, device_t, xen_device_t)
+	allow $1 xen_device_t:chr_file map;
 ')
 
 ########################################
@@ -5661,7 +6036,7 @@ interface(`dev_rw_xserver_misc',`
 	')
 
 	rw_chr_files_pattern($1, device_t, xserver_misc_device_t)
-	        allow $1 xserver_misc_device_t:chr_file map;
+	allow $1 xserver_misc_device_t:chr_file map;
 ')
 
 ########################################
@@ -5704,6 +6079,25 @@ interface(`dev_manage_xserver_misc',`
 
 ########################################
 ## <summary>
+##	mmap X server miscellaneous devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_map_xserver_misc',`
+	gen_require(`
+		type xserver_misc_device_t;
+	')
+
+	allow $1 xserver_misc_device_t:chr_file map;
+
+')
+
+########################################
+## <summary>
 ##	Read and write to the zero device (/dev/zero).
 ## </summary>
 ## <param name="domain">
@@ -5718,6 +6112,7 @@ interface(`dev_rw_zero',`
 	')
 
 	rw_chr_files_pattern($1, device_t, zero_device_t)
+	allow $1 zero_device_t:chr_file map;
 ')
 
 ########################################
@@ -5736,8 +6131,7 @@ interface(`dev_rwx_zero',`
 	')
 
 	dev_rw_zero($1)
-	allow $1 zero_device_t:chr_file execute;
-	        allow $1 zero_device_t:chr_file { map execute };
+	allow $1 zero_device_t:chr_file { map execute };
 ')
 
 ########################################
@@ -5886,6 +6280,79 @@ interface(`dev_rw_uhid_dev',`
 	rw_chr_files_pattern($1, device_t, uhid_device_t)
 ')
 
+
+########################################
+## <summary>
+##	Allow read/write the hypervkvp device
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_hypervkvp',`
+	gen_require(`
+		type device_t, hypervkvp_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, hypervkvp_device_t)
+')
+
+########################################
+## <summary>
+##	Allow read/write the hypervkvp device
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_read_gpfs',`
+	gen_require(`
+		type device_t, gpfs_device_t;
+	')
+
+	read_chr_files_pattern($1, device_t, gpfs_device_t)
+')
+
+########################################
+## <summary>
+##	Allow read/write the gpiochip device
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_read_gpio',`
+	gen_require(`
+		type device_t, gpio_device_t;
+	')
+
+	read_chr_files_pattern($1, device_t, gpio_device_t)
+')
+
+########################################
+## <summary>
+##	Allow read/write the hypervvssd device
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`dev_rw_hypervvssd',`
+	gen_require(`
+		type device_t, hypervvssd_device_t;
+	')
+
+	rw_chr_files_pattern($1, device_t, hypervvssd_device_t)
+')
+
 ########################################
 ## <summary>
 ##	Create all named devices with the correct label
@@ -5969,6 +6436,8 @@ gen_require(`
 	type dlm_control_device_t;
 	type clock_device_t;
 	type v4l_device_t;
+	type vsock_device_t;
+	type vmci_device_t;
 	type vfio_device_t;
 	type event_device_t;
 	type xen_device_t;
@@ -5976,12 +6445,14 @@ gen_require(`
 	type null_device_t;
 	type random_device_t;
 	type dri_device_t;
+	type hsa_device_t;
 	type ipmi_device_t;
 	type memory_device_t;
 	type kmsg_device_t;
 	type qemu_device_t;
 	type ksm_device_t;
 	type kvm_device_t;
+	type sev_device_t;
 	type lirc_device_t;
 	type cpu_device_t;
 	type scanner_device_t;
@@ -5991,6 +6462,7 @@ gen_require(`
 	type netcontrol_device_t;
 	type nvram_device_t;
 	type power_device_t;
+	type opal_device_t;
 	type wireless_device_t;
 	type tpm_device_t;
 	type userio_device_t;
@@ -6003,6 +6475,11 @@ gen_require(`
 	type smartcard_device_t;
 	type mtrr_device_t;
 	type ecryptfs_device_t;
+    type mptctl_device_t;
+    type hypervkvp_device_t;
+    type hypervvssd_device_t;
+    type gpfs_device_t;
+    type gpio_device_t;
 ')
 
 	dev_filetrans_printer_named_dev($1)
@@ -6130,6 +6607,8 @@ gen_require(`
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "em83007")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "em83008")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "em83009")
+	filetrans_pattern($1, device_t, vsock_device_t, chr_file, "vsock")
+	filetrans_pattern($1, device_t, vmci_device_t, chr_file, "vmci")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event0")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event1")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event2")
@@ -6152,6 +6631,15 @@ gen_require(`
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event19")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event20")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "event21")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event22")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event23")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event24")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event25")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event26")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event27")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event28")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event29")
+	filetrans_pattern($1, device_t, event_device_t, chr_file, "event30")
 	filetrans_pattern($1, device_t, xen_device_t, chr_file, "evtchn")
 	filetrans_pattern($1, device_t, framebuf_device_t, chr_file, "fb0")
 	filetrans_pattern($1, device_t, framebuf_device_t, chr_file, "fb1")
@@ -6239,6 +6727,7 @@ gen_require(`
 	filetrans_pattern($1, device_t, random_device_t, chr_file, "hw_random")
 	filetrans_pattern($1, device_t, random_device_t, chr_file, "hwrng")
 	filetrans_pattern($1, device_t, dri_device_t, chr_file, "i915")
+	filetrans_pattern($1, device_t, hsa_device_t, chr_file, "kfd")
 	filetrans_pattern($1, device_t, mouse_device_t, chr_file, "inportbm")
 	filetrans_pattern($1, device_t, ipmi_device_t, chr_file, "ipmi0")
 	filetrans_pattern($1, device_t, ipmi_device_t, chr_file, "ipmi1")
@@ -6272,10 +6761,22 @@ gen_require(`
 	filetrans_pattern($1, device_t, mouse_device_t, chr_file, "mouse8")
 	filetrans_pattern($1, device_t, mouse_device_t, chr_file, "mouse9")
 	filetrans_pattern($1, device_t, memory_device_t, chr_file, "kmem")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mptctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt0ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt1ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt2ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt3ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt4ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt5ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt6ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt7ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt8ctl")
+	filetrans_pattern($1, device_t, mptctl_device_t, chr_file, "mpt9ctl")
 	filetrans_pattern($1, device_t, kmsg_device_t, chr_file, "kmsg")
 	filetrans_pattern($1, device_t, qemu_device_t, chr_file, "kqemu")
 	filetrans_pattern($1, device_t, ksm_device_t, chr_file, "ksm")
 	filetrans_pattern($1, device_t, kvm_device_t, chr_file, "kvm")
+	filetrans_pattern($1, device_t, sev_device_t, chr_file, "sev")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "lik0")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "lik1")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "lik2")
@@ -6336,6 +6837,7 @@ gen_require(`
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "mpu4017")
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "mpu4018")
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "mpu4019")
+	filetrans_pattern($1, device_t, cpu_device_t, chr_file, "msr")
 	filetrans_pattern($1, device_t, cpu_device_t, chr_file, "msr0")
 	filetrans_pattern($1, device_t, cpu_device_t, chr_file, "msr1")
 	filetrans_pattern($1, device_t, cpu_device_t, chr_file, "msr2")
@@ -6374,6 +6876,8 @@ gen_require(`
 	filetrans_pattern($1, device_t, clock_device_t, chr_file, "pcfclock8")
 	filetrans_pattern($1, device_t, clock_device_t, chr_file, "pcfclock9")
 	filetrans_pattern($1, device_t, power_device_t, chr_file, "pmu")
+	filetrans_pattern($1, device_t, opal_device_t, chr_file, "op_panel")
+	filetrans_pattern($1, device_t, opal_device_t, chr_file, "opal-prd")
 	filetrans_pattern($1, device_t, memory_device_t, chr_file, "port")
 	filetrans_pattern($1, device_t, clock_device_t, chr_file, "pps0")
 	filetrans_pattern($1, device_t, clock_device_t, chr_file, "pps1")
@@ -6446,6 +6950,16 @@ gen_require(`
 	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpm7")
 	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpm8")
 	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpm9")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm0")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm1")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm2")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm3")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm4")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm5")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm6")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm7")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm8")
+	filetrans_pattern($1, device_t, tpm_device_t, chr_file, "tpmrm9")
 	filetrans_pattern($1, device_t, event_device_t, chr_file, "uinput")
 	filetrans_pattern($1, device_t, userio_device_t, chr_file, "uio0")
 	filetrans_pattern($1, device_t, userio_device_t, chr_file, "uio1")
@@ -6479,6 +6993,7 @@ gen_require(`
 	filetrans_pattern($1, device_t, usbmon_device_t, chr_file, "usbmon9")
 	filetrans_pattern($1, device_t, scanner_device_t, chr_file, "usbscanner")
 	filetrans_pattern($1, device_t, vhost_device_t, chr_file, "vhost-net")
+	filetrans_pattern($1, device_t, vhost_device_t, chr_file, "vhost-vsock")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "vbi0")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "vbi1")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "vbi2")
@@ -6544,6 +7059,7 @@ gen_require(`
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "winradio8")
 	filetrans_pattern($1, device_t, v4l_device_t, chr_file, "winradio9")
 	filetrans_pattern($1, device_t, crypt_device_t, chr_file, "z90crypt")
+	filetrans_pattern($1, device_t, crypt_device_t, chr_file, "pkey")
 	filetrans_pattern($1, device_t, zero_device_t, chr_file, "zero")
 	filetrans_pattern($1, device_t, smartcard_device_t, chr_file, "cmx0")
 	filetrans_pattern($1, device_t, smartcard_device_t, chr_file, "cmx1")
@@ -6642,6 +7158,10 @@ gen_require(`
 	filetrans_pattern($1, device_t, xen_device_t, chr_file, "blktap9")
 	filetrans_pattern($1, device_t, xen_device_t, chr_file, "gntdev")
 	filetrans_pattern($1, device_t, xen_device_t, chr_file, "gntalloc")
+	filetrans_pattern($1, device_t, xen_device_t, chr_file, "privcmd")
+	filetrans_pattern($1, device_t, xen_device_t, chr_file, "xenbus")
+	filetrans_pattern($1, device_t, xen_device_t, chr_file, "xenbus_backend")
+	filetrans_pattern($1, device_t, xen_device_t, chr_file, "hypercall")
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "controlC0")
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "controlC1")
 	filetrans_pattern($1, device_t, sound_device_t, chr_file, "controlC2")
@@ -6690,6 +7210,12 @@ gen_require(`
 	filetrans_pattern($1, device_t, usb_device_t, chr_file, "ubb")
 	filetrans_pattern($1, device_t, usb_device_t, chr_file, "ubc")
 	filetrans_pattern($1, device_t, uhid_device_t, chr_file, "uhid")
+	filetrans_pattern($1, device_t, hypervkvp_device_t, chr_file, "hv_kvp")
+	filetrans_pattern($1, device_t, hypervvssd_device_t, chr_file, "hv_vss")
+	filetrans_pattern($1, device_t, gpfs_device_t, chr_file, "ss0")
+	filetrans_pattern($1, device_t, gpio_device_t, chr_file, "gpiochip0")
+	filetrans_pattern($1, device_t, gpio_device_t, chr_file, "gpiochip1")
+	filetrans_pattern($1, device_t, gpio_device_t, chr_file, "gpiochip2")
 	dev_filetrans_xserver_named_dev($1)
 ')
 
@@ -6756,113 +7282,4 @@ interface(`dev_filetrans_xserver_named_dev',`
 	filetrans_pattern($1, device_t, xserver_misc_device_t, chr_file, "card7")
 	filetrans_pattern($1, device_t, xserver_misc_device_t, chr_file, "card8")
 	filetrans_pattern($1, device_t, xserver_misc_device_t, chr_file, "card9")
-')
-
-########################################
-## <summary>
-##      Mmap the dri devices.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_dri',`
-        gen_require(`
-                type device_t, dri_device_t;
-        ')
-
-        allow $1 dri_device_t:chr_file map;
-')
-
-########################################
-## <summary>
-##      Mmap the framebuffer.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_framebuffer',`
-        gen_require(`
-                type framebuf_device_t;
-        ')
-
-        allow $1 framebuf_device_t:file map;
-')
-
-########################################
-## <summary>
-##      Mmap the sysfs.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_sysfs',`
-        gen_require(`
-                type sysfs_t;
-        ')
-
-        allow $1 sysfs_t:file map;
-')
-
-########################################
-## <summary>
-##      Mmap USB monitor devices.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_usbmon_dev',`
-        gen_require(`
-                type usbmon_device_t;
-        ')
-
-        allow $1 usbmon_device_t:chr_file map;
-')
-
-########################################
-## <summary>
-##      Mmap the userio devices.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_userio_dev',`
-        gen_require(`
-                type device_t, userio_device_t;
-        ')
-
-        allow $1 userio_device_t:chr_file map;
-')
-
-########################################
-## <summary>
-##      Mmap the video4linux devices.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`dev_map_video_dev',`
-        gen_require(`
-                type device_t, v4l_device_t;
-        ')
-
-        allow $1 v4l_device_t:chr_file map;
-
 ')

@@ -36,6 +36,9 @@ files_type(amanda_gnutarlists_t)
 type amanda_tmp_t;
 files_tmp_file(amanda_tmp_t)
 
+type amanda_tmpfs_t;
+files_tmpfs_file(amanda_tmpfs_t)
+
 type amanda_amandates_t;
 files_type(amanda_amandates_t)
 
@@ -62,7 +65,7 @@ optional_policy(`
 # Local policy
 #
 
-allow amanda_t self:capability { chown dac_override setuid kill };
+allow amanda_t self:capability { chown dac_read_search  dac_override setuid setgid kill sys_admin };
 allow amanda_t self:process { getsched setsched setpgid signal };
 allow amanda_t self:fifo_file rw_fifo_file_perms;
 allow amanda_t self:unix_stream_socket { accept listen };
@@ -85,6 +88,7 @@ allow amanda_t amanda_gnutarlists_t:lnk_file manage_lnk_file_perms;
 
 manage_dirs_pattern(amanda_t, amanda_var_lib_t, amanda_var_lib_t)
 manage_files_pattern(amanda_t, amanda_var_lib_t, amanda_var_lib_t)
+files_var_lib_filetrans(amanda_t, amanda_var_lib_t, dir)
 
 manage_files_pattern(amanda_t, amanda_log_t, amanda_log_t)
 manage_dirs_pattern(amanda_t, amanda_log_t, amanda_log_t)
@@ -94,10 +98,16 @@ manage_files_pattern(amanda_t, amanda_tmp_t, amanda_tmp_t)
 manage_dirs_pattern(amanda_t, amanda_tmp_t, amanda_tmp_t)
 files_tmp_filetrans(amanda_t, amanda_tmp_t, { file dir })
 
+manage_files_pattern(amanda_t, amanda_tmpfs_t, amanda_tmpfs_t)
+manage_dirs_pattern(amanda_t, amanda_tmpfs_t, amanda_tmpfs_t)
+fs_tmpfs_filetrans(amanda_t, amanda_tmpfs_t, { dir file })
+allow amanda_t amanda_tmpfs_t:file map;
+
 can_exec(amanda_t, { amanda_exec_t amanda_inetd_exec_t })
 
 kernel_read_kernel_sysctls(amanda_t)
 kernel_read_system_state(amanda_t)
+kernel_read_network_state(amanda_t)
 kernel_dontaudit_getattr_unlabeled_files(amanda_t)
 kernel_dontaudit_read_proc_symlinks(amanda_t)
 
@@ -133,10 +143,12 @@ files_getattr_all_sockets(amanda_t)
 
 fs_getattr_xattr_fs(amanda_t)
 fs_list_all(amanda_t)
+fs_getattr_tmpfs(amanda_t)
 
 storage_raw_read_fixed_disk(amanda_t)
 storage_read_tape(amanda_t)
 storage_write_tape(amanda_t)
+storage_write_scsi_generic(amanda_t)
 
 auth_use_nsswitch(amanda_t)
 auth_read_shadow(amanda_t)
@@ -148,7 +160,7 @@ logging_send_syslog_msg(amanda_t)
 # Recover local policy
 #
 
-allow amanda_recover_t self:capability { fowner fsetid kill setgid setuid chown dac_override };
+allow amanda_recover_t self:capability { fowner fsetid kill setgid setuid chown dac_read_search  };
 allow amanda_recover_t self:process { sigkill sigstop signal };
 allow amanda_recover_t self:fifo_file rw_fifo_file_perms;
 allow amanda_recover_t self:unix_stream_socket create_socket_perms;

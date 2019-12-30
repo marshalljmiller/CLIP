@@ -138,3 +138,42 @@ interface(`realmd_read_tmp_files',`
 	read_files_pattern($1, realmd_tmp_t, realmd_tmp_t)
 ')
 
+#######################################
+## <summary>
+##	Read realmd library files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`realmd_read_var_lib',`
+	gen_require(`
+		type realmd_var_lib_t;
+	')
+
+	list_dirs_pattern($1, realmd_var_lib_t, realmd_var_lib_t)
+	read_files_pattern($1, realmd_var_lib_t, realmd_var_lib_t)
+
+')
+
+########################################
+## <summary>
+##	Send to realmd  over a unix domain
+##	datagram socket.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`realmd_dgram_send',`
+	gen_require(`
+		type realmd_t, realmd_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	dgram_send_pattern($1, realmd_var_lib_t, realmd_var_lib_t, realmd_t)
+')

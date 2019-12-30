@@ -1,3 +1,4 @@
+container_file_t
 sandbox_file_t
 svirt_image_t
 svirt_home_t

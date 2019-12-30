@@ -518,6 +518,7 @@ interface(`samba_rw_var_files',`
 	files_search_var($1)
 	files_search_var_lib($1)
 	rw_files_pattern($1, samba_var_t, samba_var_t)
+    allow $1 samba_var_t:file { map};
 ')
 
 ########################################
@@ -540,6 +541,28 @@ interface(`samba_manage_var_files',`
 	files_search_var_lib($1)
 	manage_files_pattern($1, samba_var_t, samba_var_t)
 	manage_lnk_files_pattern($1, samba_var_t, samba_var_t)
+    allow $1 samba_var_t:file { map};
+')
+
+########################################
+## <summary>
+##	Allow the specified domain to
+##	read and write samba /var directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`samba_manage_var_dirs',`
+	gen_require(`
+		type samba_var_t;
+	')
+
+	files_search_var_lib($1)
+	files_search_var_lib($1)
+	manage_dirs_pattern($1, samba_var_t, samba_var_t)
 ')
 
 ########################################
@@ -603,6 +626,24 @@ interface(`samba_domtrans_smbd',`
 
 	corecmd_search_bin($1)
 	domtrans_pattern($1, smbd_exec_t, smbd_t)
+')
+
+########################################
+## <summary>
+##	Set attributes of samba_share directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`samba_setattr_samba_share_dirs',`
+	gen_require(`
+		type samba_share_t;
+	')
+
+	allow $1 samba_share_t:dir setattr_dir_perms;
 ')
 
 ######################################
@@ -775,6 +816,27 @@ interface(`samba_read_winbind_pid',`
 	allow $1 winbind_var_run_t:file read_file_perms;
 ')
 
+########################################
+## <summary>
+##	Manage winbind  PID files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`samba_manage_winbind_pid',`
+	gen_require(`
+		type winbind_var_run_t;
+	')
+
+	files_search_pids($1)
+	manage_dirs_pattern($1, winbind_var_run_t, winbind_var_run_t)
+	manage_files_pattern($1, winbind_var_run_t, winbind_var_run_t)
+	manage_sock_files_pattern($1, winbind_var_run_t, winbind_var_run_t)
+')
+
 ######################################
 ## <summary>
 ##	Allow domain to signull winbind
@@ -899,6 +961,7 @@ interface(`samba_admin',`
 		type winbind_var_run_t, winbind_tmp_t;
 		type smbd_keytab_t, samba_unit_file_t;
         type samba_unconfined_script_t;
+        type samba_unconfined_script_exec_t;
 	')
 
 	allow $1 smbd_t:process signal_perms;

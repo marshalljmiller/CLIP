@@ -32,7 +32,7 @@ userdom_user_home_content(chrome_sandbox_home_t)
 # chrome_sandbox local policy
 #
 allow chrome_sandbox_t self:capability2 block_suspend;
-allow chrome_sandbox_t self:capability { chown dac_override fsetid setgid setuid sys_admin sys_chroot sys_ptrace };
+allow chrome_sandbox_t self:capability { chown dac_read_search  fsetid setgid setuid sys_admin sys_chroot sys_ptrace };
 dontaudit chrome_sandbox_t self:capability sys_nice;
 allow chrome_sandbox_t self:process { signal_perms setrlimit execmem execstack };
 allow chrome_sandbox_t self:process setsched;
@@ -59,6 +59,8 @@ fs_tmpfs_filetrans(chrome_sandbox_t, chrome_sandbox_tmpfs_t, { file dir })
 
 kernel_read_system_state(chrome_sandbox_t)
 kernel_read_kernel_sysctls(chrome_sandbox_t)
+
+auth_dontaudit_read_passwd(chrome_sandbox_t)
 
 fs_manage_cgroup_dirs(chrome_sandbox_t)
 fs_manage_cgroup_files(chrome_sandbox_t)
@@ -110,12 +112,15 @@ fs_dontaudit_getattr_all_fs(chrome_sandbox_t)
 
 libs_legacy_use_shared_libs(chrome_sandbox_t)
 
+term_dontaudit_use_console(chrome_sandbox_t)
+
 miscfiles_read_fonts(chrome_sandbox_t)
 
 sysnet_dns_name_resolve(chrome_sandbox_t)
 
 userdom_rw_inherited_user_tmp_files(chrome_sandbox_t)
 userdom_execute_user_tmp_files(chrome_sandbox_t)
+userdom_map_tmp_files(chrome_sandbox_t)
 
 userdom_use_user_ptys(chrome_sandbox_t)
 userdom_write_inherited_user_tmp_files(chrome_sandbox_t)
@@ -188,6 +193,9 @@ optional_policy(`
 	sandbox_use_ptys(chrome_sandbox_t)
 ')
 
+optional_policy(`
+    unconfined_dontaudit_write_state(chrome_sandbox_t)
+')
 
 ########################################
 #

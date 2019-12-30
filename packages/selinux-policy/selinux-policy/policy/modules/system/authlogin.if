@@ -62,16 +62,14 @@ interface(`auth_use_pam',`
 	auth_create_lastlog($1)
 	auth_manage_faillog($1)
 	auth_exec_pam($1)
-	#auth_use_nsswitch($1)
+	auth_use_nsswitch($1)
 
 	init_rw_stream_sockets($1)
 
 	logging_send_audit_msgs($1)
 	logging_send_syslog_msg($1)
 
-	optional_policy(`
-		userdom_search_user_tmp_dirs($1)
-	')
+	userdom_search_user_tmp_dirs($1)
 
 	optional_policy(`
 		dbus_system_bus_client($1)
@@ -94,9 +92,9 @@ interface(`auth_use_pam',`
 		locallogin_getattr_home_content($1)
  	')
 
-	#optional_policy(`
-	#	nis_authenticate($1)
-	#')
+	optional_policy(`
+		nis_authenticate($1)
+	')
 
 	optional_policy(`
 		systemd_dbus_chat_logind($1)
@@ -397,7 +395,7 @@ interface(`auth_manage_cache',`
 
 	manage_dirs_pattern($1, auth_cache_t, auth_cache_t)
 	manage_files_pattern($1, auth_cache_t, auth_cache_t)
-	allow $1 auth_cache_t:file map;
+    allow $1 auth_cache_t:file map;
 ')
 
 #######################################
@@ -420,52 +418,52 @@ interface(`auth_var_filetrans_cache',`
 
 ########################################
 ## <summary>
-##      Run unix_chkpwd to check a password.
+##	Run unix_chkpwd to check a password.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed to transition.
-##      </summary>
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
 ## </param>
 #
 interface(`auth_domtrans_chk_passwd',`
-        gen_require(`
-                type chkpwd_t, chkpwd_exec_t, shadow_t;
-                type auth_cache_t;
-        ')
+	gen_require(`
+		type chkpwd_t, chkpwd_exec_t, shadow_t;
+		type auth_cache_t;
+	')
 
-        allow $1 auth_cache_t:dir search_dir_perms;
+	allow $1 auth_cache_t:dir search_dir_perms;
 
-        corecmd_search_bin($1)
-        domtrans_pattern($1, chkpwd_exec_t, chkpwd_t)
+	corecmd_search_bin($1)
+	domtrans_pattern($1, chkpwd_exec_t, chkpwd_t)
     allow $1 chkpwd_exec_t:file map;
 
-        dontaudit $1 shadow_t:file read_file_perms;
+	dontaudit $1 shadow_t:file read_file_perms;
 
-        dev_read_rand($1)
-        dev_read_urand($1)
+	dev_read_rand($1)
+	dev_read_urand($1)
 
-        auth_use_nsswitch($1)
-        auth_rw_faillog($1)
+	auth_use_nsswitch($1)
+	auth_rw_faillog($1)
 
-        logging_send_audit_msgs($1)
+	logging_send_audit_msgs($1)
 
-        miscfiles_read_generic_certs($1)
+	miscfiles_read_generic_certs($1)
 
-        optional_policy(`
-                kerberos_read_keytab($1)
-        ')
+	optional_policy(`
+		kerberos_read_keytab($1)
+	')
 
-        optional_policy(`
-                pcscd_read_pid_files($1)
-                pcscd_stream_connect($1)
-        ')
+	optional_policy(`
+		pcscd_read_pid_files($1)
+		pcscd_stream_connect($1)
+	')
 
-        optional_policy(`
-                samba_stream_connect_winbind($1)
-        ')
+	optional_policy(`
+		samba_stream_connect_winbind($1)
+	')
 
-        auth_domtrans_upd_passwd($1)
+	auth_domtrans_upd_passwd($1)
 ')
 
 ########################################
@@ -634,6 +632,24 @@ interface(`auth_dontaudit_getattr_shadow',`
 
 ########################################
 ## <summary>
+## Mmap the shadow passwords file.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`auth_map_shadow',`
+	gen_require(`
+		type shadow_t;
+	')
+
+	allow $1 shadow_t:file map;
+')
+
+########################################
+## <summary>
 ##	Read the shadow passwords file (/etc/shadow)
 ## </summary>
 ## <param name="domain">
@@ -649,27 +665,6 @@ interface(`auth_dontaudit_getattr_shadow',`
 interface(`auth_read_shadow',`
 	auth_can_read_shadow_passwords($1)
 	auth_tunable_read_shadow($1)
-')
-
-########################################
-## <summary>
-##	Read the oshadow passwords file (/etc/security/opasswd)
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`auth_read_oshadow',`
-	gen_require(`
-		type oshadow_t;
-		attribute can_read_oshadow_passwords;
-	')
-
-	
-	allow $1 oshadow_t:file read_file_perms;
-	typeattribute $1 can_read_oshadow_passwords;
 ')
 
 ########################################
@@ -747,25 +742,6 @@ interface(`auth_dontaudit_read_shadow',`
 
 ########################################
 ## <summary>
-##	Do not audit attempts to manage the shadow
-##	password file (/etc/shadow).
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain to not audit.
-##	</summary>
-## </param>
-#
-interface(`auth_dontaudit_manage_shadow',`
-	gen_require(`
-		type shadow_t;
-	')
-
-	dontaudit $1 shadow_t:file manage_file_perms;
-')
-
-########################################
-## <summary>
 ##	Read and write the shadow password file (/etc/shadow).
 ## </summary>
 ## <param name="domain">
@@ -808,29 +784,7 @@ interface(`auth_manage_shadow',`
 	files_var_filetrans($1, shadow_t, file, "shadow-")
 	files_etc_filetrans($1, shadow_t, file, "gshadow")
 	files_etc_filetrans($1, shadow_t, file, "nshadow")
-')
-
-########################################
-## <summary>
-##	Create, read, write, and delete the oshadow
-##	password file.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`auth_manage_oshadow',`
-	gen_require(`
-		attribute can_read_oshadow_passwords, can_write_oshadow_passwords;
-		type oshadow_t;
-	')
-
-	allow $1 oshadow_t:file manage_file_perms;
-	typeattribute $1 can_read_oshadow_passwords, can_write_oshadow_passwords;
-	files_etc_filetrans($1, oshadow_t, file, "opasswd")
-	files_etc_filetrans($1, oshadow_t, file, "nopasswd")
+	files_etc_filetrans($1, shadow_t, file, "opasswd")
 ')
 
 #######################################
@@ -1268,45 +1222,6 @@ interface(`auth_read_pam_pid',`
 	files_search_pids($1)
 	allow $1 pam_var_run_t:dir list_dir_perms;
 	allow $1 pam_var_run_t:file read_file_perms;
-')
-
-########################################
-## <summary>
-##	Relabel PAM PID files/dirs.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`auth_relabel_pam_pid',`
-	gen_require(`
-		type pam_var_run_t;
-	')
-
-	files_search_pids($1)
-	allow $1 pam_var_run_t:dir relabel_dir_perms;
-	allow $1 pam_var_run_t:file relabel_file_perms;
-')
-
-########################################
-## <summary>
-##	Create PAM PID files/dirs.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`auth_create_pam_pid',`
-	gen_require(`
-		type pam_var_run_t;
-	')
-
-	files_search_pids($1)
-	create_files_pattern($1,pam_var_run_t,pam_var_run_t)
 ')
 
 #######################################
@@ -2080,6 +1995,62 @@ interface(`auth_manage_login_records',`
 
 ########################################
 ## <summary>
+##	Read access to the authlogin module.
+## </summary>
+## <desc>
+##	<p>
+##	Read access to the authlogin module.
+##	</p>
+##	<p>
+##	Currently, this only allows assertions for
+##	the shadow passwords file (/etc/shadow) to
+##	be passed.  No access is granted yet.
+##	</p>
+## </desc>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`auth_reader_shadow',`
+	gen_require(`
+		attribute can_read_shadow_passwords;
+	')
+
+	typeattribute $1 can_read_shadow_passwords;
+')
+
+########################################
+## <summary>
+##	Write access to the authlogin module.
+## </summary>
+## <desc>
+##	<p>
+##	Write access to the authlogin module.
+##	</p>
+##	<p>
+##	Currently, this only allows assertions for
+##	the shadow passwords file (/etc/shadow) to
+##	be passed.  No access is granted yet.
+##	</p>
+## </desc>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`auth_writer_shadow',`
+	gen_require(`
+		attribute can_write_shadow_passwords;
+	')
+
+	typeattribute $1 can_write_shadow_passwords;
+')
+
+########################################
+## <summary>
 ##	Use nsswitch to look up user, password, group, or
 ##	host information.
 ## </summary>
@@ -2105,7 +2076,7 @@ interface(`auth_use_nsswitch',`
 
 	typeattribute $1 nsswitch_domain;
 
-	#corenet_all_recvfrom_netlabel($1)
+	corenet_all_recvfrom_netlabel($1)
 ')
 
 ########################################
@@ -2133,15 +2104,11 @@ interface(`auth_unconfined',`
 		attribute can_read_shadow_passwords;
 		attribute can_write_shadow_passwords;
 		attribute can_relabelto_shadow_passwords;
-		attribute can_read_oshadow_passwords;
-		attribute can_write_oshadow_passwords;
 	')
 
 	typeattribute $1 can_read_shadow_passwords;
 	typeattribute $1 can_write_shadow_passwords;
 	typeattribute $1 can_relabelto_shadow_passwords;
-	typeattribute $1 can_read_oshadow_passwords;
-	typeattribute $1 can_write_oshadow_passwords;
 ')
 
 ########################################
@@ -2157,7 +2124,6 @@ interface(`auth_unconfined',`
 interface(`auth_filetrans_named_content',`
 	gen_require(`
 		type shadow_t;
-		type oshadow_t;
 		type passwd_file_t;
 		type faillog_t;
 		type lastlog_t;
@@ -2182,7 +2148,7 @@ interface(`auth_filetrans_named_content',`
 	files_etc_filetrans($1, shadow_t, file, "shadow")
 	files_etc_filetrans($1, shadow_t, file, "shadow-")
 	files_etc_filetrans($1, shadow_t, file, "gshadow")
-	files_etc_filetrans($1, oshadow_t, file, "opasswd")
+	files_etc_filetrans($1, shadow_t, file, "opasswd")
 	logging_log_named_filetrans($1, lastlog_t, file, "lastlog")
 	logging_log_named_filetrans($1, faillog_t, file, "tallylog")
 	logging_log_named_filetrans($1, faillog_t, file, "faillog")
@@ -2239,6 +2205,9 @@ interface(`auth_dontaudit_getattr_passwd',`
 ########################################
 ## <summary>
 ##	Read the passwd passwords file (/etc/passwd)
+##	Allow to use sss nsswitch module for passwd and group.
+##	Allow to use systemd nsswitch module for passwd and group
+##	which is used for dynamic users.
 ## </summary>
 ## <param name="domain">
 ##	<summary>
@@ -2252,6 +2221,29 @@ interface(`auth_read_passwd',`
 	')
 
 	allow $1 passwd_file_t:file read_file_perms;
+	optional_policy(`
+		sssd_read_public_files($1)
+		sssd_stream_connect($1)
+	')
+	init_dbus_chat($1)
+')
+
+########################################
+## <summary>
+##	Mmap the passwd passwords file (/etc/passwd)
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`auth_map_passwd',`
+	gen_require(`
+		type passwd_file_t;
+	')
+
+	allow $1 passwd_file_t:file map;
 ')
 
 ########################################
@@ -2271,25 +2263,6 @@ interface(`auth_dontaudit_read_passwd',`
 	')
 
 	dontaudit $1 passwd_file_t:file read_file_perms;
-')
-
-########################################
-## <summary>
-##	Do not audit attempts to manage the passwd 
-##	password file (/etc/shadow).
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain to not audit.
-##	</summary>
-## </param>
-#
-interface(`auth_dontaudit_manage_passwd',`
-	gen_require(`
-		type passwd_file_t;
-	')
-
-	dontaudit $1 passwd_file_t:file manage_file_perms;
 ')
 
 ########################################
@@ -2336,11 +2309,9 @@ interface(`auth_filetrans_admin_home_content',`
 		type auth_home_t;
 	')
 
-	optional_policy(`
-		userdom_admin_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator")
-		userdom_admin_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator~")
-		userdom_admin_home_dir_filetrans($1, auth_home_t, dir, ".yubico")
-	')
+	userdom_admin_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator")
+	userdom_admin_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator~")
+	userdom_admin_home_dir_filetrans($1, auth_home_t, dir, ".yubico")
 ')
 
 
@@ -2360,9 +2331,7 @@ interface(`auth_read_home_content',`
 		type auth_home_t;
 	')
 
-	optional_policy(`
-		userdom_search_user_home_dirs($1)
-	')
+	userdom_search_user_home_dirs($1)
 	read_files_pattern($1, auth_home_t, auth_home_t)
 ')
 
@@ -2382,9 +2351,7 @@ interface(`auth_manage_home_content',`
 		type auth_home_t;
 	')
 
-	optional_policy(`
-		userdom_search_user_home_dirs($1)
-	')
+	userdom_search_user_home_dirs($1)
 	manage_files_pattern($1, auth_home_t, auth_home_t)
     manage_dirs_pattern($1, auth_home_t, auth_home_t)
 ')
@@ -2406,11 +2373,9 @@ interface(`auth_filetrans_home_content',`
 		type auth_home_t;
 	')
 
-	optional_policy(`
-		userdom_user_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator")
-		userdom_user_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator~")
-		userdom_user_home_dir_filetrans($1, auth_home_t, dir, ".yubico")
-	')
+	userdom_user_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator")
+	userdom_user_home_dir_filetrans($1, auth_home_t, file, ".google_authenticator~")
+	userdom_user_home_dir_filetrans($1, auth_home_t, dir, ".yubico")
 ')
 
 ########################################
@@ -2447,40 +2412,4 @@ interface(`auth_login_manage_key',`
 	')
 
 	allow $1 login_pgm:key manage_key_perms;
-')
-
-########################################
-## <summary>
-## Mmap the shadow passwords file.
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`auth_map_shadow',`
-        gen_require(`
-                type shadow_t;
-        ')
-
-        allow $1 shadow_t:file map;
-')
-
-########################################
-## <summary>
-##      Mmap the passwd passwords file (/etc/passwd)
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-#
-interface(`auth_map_passwd',`
-        gen_require(`
-                type passwd_file_t;
-        ')
-
-        allow $1 passwd_file_t:file map;
 ')

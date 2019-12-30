@@ -35,6 +35,7 @@ allow l2tpd_t self:socket create_socket_perms;
 allow l2tpd_t self:tcp_socket { accept listen };
 allow l2tpd_t self:unix_dgram_socket sendto;
 allow l2tpd_t self:unix_stream_socket { accept listen };
+allow l2tpd_t self:pppox_socket create_socket_perms;
 
 read_files_pattern(l2tpd_t, l2tp_conf_t, l2tp_conf_t)
 
@@ -82,6 +83,7 @@ term_use_generic_ptys(l2tpd_t)
 term_use_ptmx(l2tpd_t)
 
 auth_read_passwd(l2tpd_t)
+auth_map_passwd(l2tpd_t)
 
 logging_send_syslog_msg(l2tpd_t)
 
@@ -89,8 +91,7 @@ sysnet_dns_name_resolve(l2tpd_t)
 
 optional_policy(`
     dbus_system_bus_client(l2tpd_t)
-# BMW removed for CLIP
-#    dbus_connect_system_bus(l2tpd_t)
+    dbus_connect_system_bus(l2tpd_t)
     
     optional_policy(`
         networkmanager_dbus_chat(l2tpd_t)
@@ -102,10 +103,19 @@ optional_policy(`
     ipsec_mgmt_read_pid(l2tpd_t)
     ipsec_filetrans_key_file(l2tpd_t)
     ipsec_manage_key_file(l2tpd_t)
+    ipsec_kill_mgmt(l2tpd_t)
+    ipsec_read_config(l2tpd_t)
+    ipsec_signull_mgmt(l2tpd_t)
 ')
 
 optional_policy(`
-	networkmanager_read_pid_files(l2tpd_t)
+    sssd_run_stream_connect(l2tpd_t)
+    sssd_stream_connect(l2tpd_t)
+    sssd_read_public_files(l2tpd_t)
+')
+
+optional_policy(`
+	networkmanager_manage_pid_files(l2tpd_t)
 ')
 
 optional_policy(`

@@ -18,6 +18,9 @@ domain_type(nsd_crond_t)
 domain_entry_file(nsd_crond_t, nsd_exec_t)
 role system_r types nsd_crond_t;
 
+type nsd_log_t;
+logging_log_file(nsd_log_t)
+
 type nsd_var_run_t;
 files_pid_file(nsd_var_run_t)
 
@@ -25,29 +28,42 @@ files_pid_file(nsd_var_run_t)
 type nsd_zone_t alias nsd_db_t;
 files_type(nsd_zone_t)
 
+type nsd_tmp_t;
+files_tmp_file(nsd_tmp_t)
+
 ########################################
 #
 # NSD Local policy
 #
 
-allow nsd_t self:capability { chown dac_override kill setgid setuid };
+allow nsd_t self:capability { chown dac_read_search  dac_override kill setgid setuid net_admin };
 dontaudit nsd_t self:capability sys_tty_config;
 allow nsd_t self:process signal_perms;
 allow nsd_t self:tcp_socket create_stream_socket_perms;
 allow nsd_t self:udp_socket create_socket_perms;
 allow nsd_t self:fifo_file rw_fifo_file_perms;
 
-allow nsd_t nsd_conf_t:dir list_dir_perms;
-read_files_pattern(nsd_t, nsd_conf_t, nsd_conf_t)
+manage_dirs_pattern(nsd_t, nsd_conf_t, nsd_conf_t)
+manage_files_pattern(nsd_t, nsd_conf_t, nsd_conf_t)
 read_lnk_files_pattern(nsd_t, nsd_conf_t, nsd_conf_t)
 
 manage_files_pattern(nsd_t, nsd_var_run_t, nsd_var_run_t)
-files_pid_filetrans(nsd_t, nsd_var_run_t, file)
+manage_sock_files_pattern(nsd_t, nsd_var_run_t, nsd_var_run_t)
+files_pid_filetrans(nsd_t, nsd_var_run_t, { file sock_file })
+
+manage_files_pattern(nsd_t, nsd_log_t, nsd_log_t)
+logging_log_filetrans(nsd_t, nsd_log_t, file)
 
 manage_dirs_pattern(nsd_t, nsd_zone_t, nsd_zone_t)
 manage_files_pattern(nsd_t, nsd_zone_t, nsd_zone_t)
 manage_lnk_files_pattern(nsd_t, nsd_zone_t, nsd_zone_t)
 files_var_lib_filetrans(nsd_t, nsd_zone_t, dir)
+allow nsd_t nsd_zone_t:file { map } ;
+
+manage_dirs_pattern(nsd_t, nsd_tmp_t, nsd_tmp_t)
+manage_files_pattern(nsd_t, nsd_tmp_t, nsd_tmp_t)
+files_tmp_filetrans(nsd_t, nsd_tmp_t, { file dir })
+allow nsd_t nsd_tmp_t:file { map } ;
 
 can_exec(nsd_t, nsd_exec_t)
 
@@ -68,6 +84,9 @@ corenet_udp_bind_generic_node(nsd_t)
 corenet_tcp_bind_dns_port(nsd_t)
 corenet_udp_bind_dns_port(nsd_t)
 corenet_sendrecv_dns_server_packets(nsd_t)
+corenet_tcp_bind_nsd_control_port(nsd_t)
+corenet_sendrecv_nsd_control_server_packets(nsd_t)
+corenet_tcp_connect_nsd_control_port(nsd_t)
 
 dev_read_sysfs(nsd_t)
 dev_read_urand(nsd_t)
@@ -101,7 +120,7 @@ optional_policy(`
 #
 
 # kill capability for root cron job and non-root daemon
-allow nsd_crond_t self:capability { dac_override kill };
+allow nsd_crond_t self:capability { dac_read_search  kill };
 dontaudit nsd_crond_t self:capability sys_nice;
 allow nsd_crond_t self:process { setsched signal_perms };
 allow nsd_crond_t self:fifo_file rw_fifo_file_perms;
@@ -148,6 +167,10 @@ auth_use_nsswitch(nsd_crond_t)
 logging_send_syslog_msg(nsd_crond_t)
 
 userdom_dontaudit_search_user_home_dirs(nsd_crond_t)
+
+optional_policy(`
+	nsd_read_pid(nsd_crond_t)
+')
 
 optional_policy(`
 	cron_system_entry(nsd_crond_t, nsd_exec_t)

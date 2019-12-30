@@ -61,8 +61,6 @@ ifdef(`distro_redhat',`
 /etc/cron.weekly(/.*)?			gen_context(system_u:object_r:bin_t,s0)
 /etc/cron.monthly(/.*)?			gen_context(system_u:object_r:bin_t,s0)
 
-/etc/ctdb/events\.d/.*       --  gen_context(system_u:object_r:bin_t,s0)
-
 /etc/dhcp/dhclient\.d(/.*)?		gen_context(system_u:object_r:bin_t,s0)
 
 /etc/hotplug/.*agent		--	gen_context(system_u:object_r:bin_t,s0)
@@ -71,6 +69,7 @@ ifdef(`distro_redhat',`
 /etc/hotplug\.d/default/default.*	gen_context(system_u:object_r:bin_t,s0)
 
 /etc/kde/env(/.*)?			gen_context(system_u:object_r:bin_t,s0)
+/etc/kde/kdm(/.*)?			gen_context(system_u:object_r:bin_t,s0)
 /etc/kde/shutdown(/.*)?			gen_context(system_u:object_r:bin_t,s0)
 
 /etc/redhat-lsb(/.*)?			gen_context(system_u:object_r:bin_t,s0)
@@ -79,6 +78,11 @@ ifdef(`distro_redhat',`
 /etc/lxdm/Post.*		--	gen_context(system_u:object_r:bin_t,s0)
 /etc/lxdm/Pre.*			--	gen_context(system_u:object_r:bin_t,s0)
 /etc/lxdm/Xsession		--	gen_context(system_u:object_r:bin_t,s0)
+
+/etc/sddm/Xsession		--	gen_context(system_u:object_r:bin_t,s0)
+/etc/sddm/wayland-session		--	gen_context(system_u:object_r:bin_t,s0)
+/etc/sddm/Xsetup		--	gen_context(system_u:object_r:bin_t,s0)
+/etc/sddm/Xstop		--	gen_context(system_u:object_r:bin_t,s0)
 
 /etc/mail/make			--	gen_context(system_u:object_r:bin_t,s0)
 
@@ -112,11 +116,12 @@ ifdef(`distro_redhat',`
 
 /etc/racoon/scripts(/.*)?		gen_context(system_u:object_r:bin_t,s0)
 
+/etc/init\.d/vboxdrv.*      gen_context(system_u:object_r:bin_t,s0)
+
 /etc/rc\.d/init\.d/functions	--	gen_context(system_u:object_r:bin_t,s0)
 
 /etc/sysconfig/crond		--	gen_context(system_u:object_r:bin_t,s0)
 /etc/sysconfig/init		--	gen_context(system_u:object_r:bin_t,s0)
-/etc/sysconfig/libvirtd		--	gen_context(system_u:object_r:bin_t,s0)
 /etc/sysconfig/netconsole	--	gen_context(system_u:object_r:bin_t,s0)
 /etc/sysconfig/readonly-root 	--	gen_context(system_u:object_r:bin_t,s0)
 
@@ -124,9 +129,6 @@ ifdef(`distro_redhat',`
 /etc/sysconfig/network-scripts/ifdown.* gen_context(system_u:object_r:bin_t,s0)
 /etc/sysconfig/network-scripts/net.*	gen_context(system_u:object_r:bin_t,s0)
 /etc/sysconfig/network-scripts/init.*	gen_context(system_u:object_r:bin_t,s0)
-
-/etc/vmware-tools(/.*)?			gen_context(system_u:object_r:bin_t,s0)
-
 
 /etc/wdmd\.d/checkquorum\.wdmd	gen_context(system_u:object_r:bin_t,s0)
 
@@ -141,6 +143,8 @@ ifdef(`distro_redhat',`
 ifdef(`distro_debian',`
 /etc/mysql/debian-start		--	gen_context(system_u:object_r:bin_t,s0)
 ')
+
+/etc/dhcp/scripts(/.*)?			gen_context(system_u:object_r:bin_t,s0)
 
 #
 # /lib
@@ -242,6 +246,7 @@ ifdef(`distro_gentoo',`
 /usr/lib/courier(/.*)?		gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/cups(/.*)? 		gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/cyrus-imapd/.*	--	gen_context(system_u:object_r:bin_t,s0)
+/usr/lib/dotnet/dotnet	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/dpkg/.+		--	gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/emacsen-common/.*		gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/gimp/.*/plug-ins(/.*)?		gen_context(system_u:object_r:bin_t,s0)
@@ -313,6 +318,7 @@ ifdef(`distro_gentoo',`
 /usr/libexec/cockpit-agent      --  gen_context(system_u:object_r:shell_exec_t,s0)
 /usr/bin/cockpit-bridge         -- gen_context(system_u:object_r:shell_exec_t,s0)
 /usr/libexec/sesh		        --	gen_context(system_u:object_r:shell_exec_t,s0)
+/usr/libexec/sudo/sesh		        --	gen_context(system_u:object_r:shell_exec_t,s0)
 
 /usr/libexec/openssh/sftp-server --	gen_context(system_u:object_r:bin_t,s0)
 
@@ -344,7 +350,6 @@ ifdef(`distro_gentoo',`
 /usr/share/cluster/svclib_nfslock --	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/cluster/SAPDatabase	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/cluster/SAPInstance	--	gen_context(system_u:object_r:bin_t,s0)
-/usr/share/cluster/fence_scsi_check\.pl	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/cluster/checkquorum.*	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/e16/misc(/.*)?		gen_context(system_u:object_r:bin_t,s0)
 /usr/share/gedit-2/plugins/externaltools/tools(/.*)? gen_context(system_u:object_r:bin_t,s0)
@@ -372,7 +377,6 @@ ifdef(`distro_gentoo',`
 /usr/share/shorewall-shell(/.*)?	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/shorewall-lite(/.*)? 	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/shorewall6-lite(/.*)?	gen_context(system_u:object_r:bin_t,s0)
-/usr/share/spamassassin/sa-update\.cron gen_context(system_u:object_r:bin_t,s0)
 /usr/share/texlive/texmf/web2c/mktex(dir|nam|upd)	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/turboprint/lib(/.*)?	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/share/tucan.*/tucan.py	--	gen_context(system_u:object_r:bin_t,s0)
@@ -490,6 +494,8 @@ ifdef(`distro_suse', `
 ifdef(`distro_suse',`
 /var/lib/samba/bin/.+			gen_context(system_u:object_r:bin_t,s0)
 ')
+
+/var/usrlocal/(.*/)?bin(/.*)?    gen_context(system_u:object_r:bin_t,s0)
 
 #
 # /usr/lib

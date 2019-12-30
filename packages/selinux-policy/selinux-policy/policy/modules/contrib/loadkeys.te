@@ -17,7 +17,7 @@ role loadkeys_roles types loadkeys_t;
 # Local policy
 #
 
-allow loadkeys_t self:capability { dac_override dac_read_search setuid sys_tty_config };
+allow loadkeys_t self:capability {  dac_read_search setuid sys_tty_config };
 allow loadkeys_t self:fifo_file rw_fifo_file_perms;
 
 kernel_read_system_state(loadkeys_t)
@@ -37,7 +37,7 @@ init_dontaudit_use_script_ptys(loadkeys_t)
 
 locallogin_use_fds(loadkeys_t)
 
-userdom_use_inherited_user_ttys(loadkeys_t)
+userdom_use_user_ttys(loadkeys_t)
 userdom_list_user_home_content(loadkeys_t)
 
 ifdef(`hide_broken_symptoms',`
@@ -50,4 +50,9 @@ optional_policy(`
 
 optional_policy(`
 	nscd_dontaudit_search_pid(loadkeys_t)
+')
+
+optional_policy(`
+    sssd_read_public_files(loadkeys_t)
+    sssd_stream_connect(loadkeys_t)
 ')

@@ -204,7 +204,7 @@ tunable_policy(`xend_run_qemu',`
 # xend local policy
 #
 
-allow xend_t self:capability { dac_override ipc_lock net_admin setuid sys_admin sys_nice sys_tty_config net_raw sys_rawio };
+allow xend_t self:capability { dac_read_search  ipc_lock net_admin setuid sys_admin sys_nice sys_tty_config net_raw sys_rawio };
 allow xend_t self:process { signal sigkill };
 
 # needed by qemu_dm
@@ -376,8 +376,9 @@ optional_policy(`
 # Xen console local policy
 #
 
-allow xenconsoled_t self:capability { dac_override fsetid ipc_lock };
+allow xenconsoled_t self:capability { dac_read_search fsetid ipc_lock sys_resource sys_tty_config };
 allow xenconsoled_t self:process setrlimit;
+allow xenconsoled_t self:unix_dgram_socket create_socket_perms;
 allow xenconsoled_t self:unix_stream_socket create_stream_socket_perms;
 allow xenconsoled_t self:fifo_file rw_fifo_file_perms;
 
@@ -421,7 +422,7 @@ optional_policy(`
 # Xen store local policy
 #
 
-allow xenstored_t self:capability { dac_override ipc_lock sys_resource };
+allow xenstored_t self:capability { dac_read_search  ipc_lock sys_resource };
 allow xenstored_t self:unix_stream_socket create_stream_socket_perms;
 allow xenstored_t self:unix_dgram_socket create_socket_perms;
 
@@ -449,14 +450,18 @@ files_var_lib_filetrans(xenstored_t, xenstored_var_lib_t, { file dir sock_file }
 
 stream_connect_pattern(xenstored_t, evtchnd_var_run_t, evtchnd_var_run_t, evtchnd_t)
 
+auth_use_nsswitch(xenstored_t)
+
+can_exec(xenstored_t, xenstored_exec_t)
+
 kernel_write_xen_state(xenstored_t)
 kernel_read_xen_state(xenstored_t)
+
+corecmd_exec_bin(xenstored_t)
 
 dev_filetrans_xen(xenstored_t)
 dev_rw_xen(xenstored_t)
 dev_read_sysfs(xenstored_t)
-
-
 
 fs_search_xenfs(xenstored_t)
 fs_manage_xenfs_files(xenstored_t)

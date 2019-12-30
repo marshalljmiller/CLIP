@@ -86,7 +86,7 @@ optional_policy(`
 # pegasus openlmi account local policy
 #
 
-allow pegasus_openlmi_account_t self:capability { chown dac_override fowner fsetid };
+allow pegasus_openlmi_account_t self:capability { chown dac_read_search  fowner fsetid };
 allow pegasus_openlmi_account_t self:process setfscreate;
 
 auth_manage_passwd(pegasus_openlmi_account_t)
@@ -123,7 +123,7 @@ optional_policy(`
 # pegasus openlmi logicalfile local policy
 #
 
-allow pegasus_openlmi_logicalfile_t self:capability { dac_override };
+allow pegasus_openlmi_logicalfile_t self:capability { dac_read_search  };
 files_manage_non_security_dirs(pegasus_openlmi_logicalfile_t)
 files_manage_non_security_files(pegasus_openlmi_logicalfile_t)
 
@@ -158,6 +158,8 @@ allow pegasus_openlmi_services_t self:netlink_route_socket r_netlink_socket_perm
 
 kernel_read_network_state(pegasus_openlmi_services_t)
 
+miscfiles_read_certs(pegasus_openlmi_services_t)
+
 optional_policy(`
     dbus_system_bus_client(pegasus_openlmi_services_t)
 ')
@@ -167,6 +169,7 @@ optional_policy(`
 ')
 
 optional_policy(`
+	sssd_read_public_files(pegasus_openlmi_services_t)
     sssd_stream_connect(pegasus_openlmi_services_t)
 ')
 
@@ -182,8 +185,12 @@ allow pegasus_openlmi_system_t self:netlink_route_socket r_netlink_socket_perms;
 
 kernel_read_network_state(pegasus_openlmi_system_t)
 
+auth_use_nsswitch(pegasus_openlmi_system_t)
+
 dev_rw_sysfs(pegasus_openlmi_system_t)
 dev_read_urand(pegasus_openlmi_system_t)
+
+fs_getattr_all_fs(pegasus_openlmi_system_t)
 
 init_read_utmp(pegasus_openlmi_system_t)
 
@@ -283,7 +290,7 @@ files_read_kernel_modules(pegasus_openlmi_storage_t)
 
 fs_getattr_all_fs(pegasus_openlmi_storage_t)
 
-modutils_domtrans_insmod(pegasus_openlmi_storage_t)
+modutils_domtrans_kmod(pegasus_openlmi_storage_t)
 
 udev_domtrans(pegasus_openlmi_storage_t)
 udev_read_pid_files(pegasus_openlmi_storage_t)
@@ -294,6 +301,10 @@ miscfiles_read_hwdata(pegasus_openlmi_storage_t)
 
 optional_policy(`
     dmidecode_domtrans(pegasus_openlmi_storage_t)  
+')
+
+optional_policy(`
+    gnome_dontaudit_search_config(pegasus_openlmi_storage_t)
 ')
 
 optional_policy(`
@@ -339,8 +350,8 @@ optional_policy(`
 # pegasus local policy
 #
 
-allow pegasus_t self:capability { chown kill ipc_lock sys_nice setuid setgid dac_override net_admin net_bind_service };
-dontaudit pegasus_t self:capability sys_tty_config;
+allow pegasus_t self:capability { chown kill ipc_lock sys_nice setuid setgid dac_read_search  net_admin net_bind_service sys_ptrace };
+dontaudit pegasus_t self:capability { sys_admin sys_tty_config };
 allow pegasus_t self:process { setsched signal };
 allow pegasus_t self:fifo_file rw_fifo_file_perms;
 allow pegasus_t self:unix_dgram_socket create_socket_perms;
@@ -378,6 +389,7 @@ files_pid_filetrans(pegasus_t, pegasus_var_run_t, { file dir })
 
 kernel_read_network_state(pegasus_t)
 kernel_read_kernel_sysctls(pegasus_t)
+kernel_read_sysctl(pegasus_t)
 kernel_read_fs_sysctls(pegasus_t)
 kernel_read_system_state(pegasus_t)
 kernel_search_vm_sysctl(pegasus_t)
@@ -406,9 +418,12 @@ corecmd_exec_shell(pegasus_t)
 
 dev_rw_sysfs(pegasus_t)
 dev_read_urand(pegasus_t)
+dev_rw_lvm_control(pegasus_t)
 
 fs_getattr_all_fs(pegasus_t)
 fs_search_auto_mountpoints(pegasus_t)
+fs_mount_tracefs(pegasus_t)
+fs_unmount_tracefs(pegasus_t)
 files_getattr_all_dirs(pegasus_t)
 
 auth_use_nsswitch(pegasus_t)
@@ -443,8 +458,7 @@ optional_policy(`
 
 optional_policy(`
     dbus_system_bus_client(pegasus_t)
-# BMW removed for CLIP
-#    dbus_connect_system_bus(pegasus_t)
+    dbus_connect_system_bus(pegasus_t)
 
     optional_policy(`
 	networkmanager_dbus_chat(pegasus_t)
@@ -461,6 +475,10 @@ optional_policy(`
 
 optional_policy(`
 	lldpad_dgram_send(pegasus_t)
+')
+
+optional_policy(`
+	lvm_exec(pegasus_t)
 ')
 
 optional_policy(`
@@ -505,6 +523,10 @@ optional_policy(`
 	virt_domtrans(pegasus_t)
 	virt_stream_connect(pegasus_t)
 	virt_manage_config(pegasus_t)
+')
+
+optional_policy(`
+	qemu_getattr_exec(pegasus_t)
 ')
 
 optional_policy(`

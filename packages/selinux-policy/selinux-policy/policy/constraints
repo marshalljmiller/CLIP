@@ -25,11 +25,6 @@
 # name_list : name | name_list name		
 #
 
-# SRS: uncomment once you have SECMARK rules in-place
-# only allow kernel_t to send and receive unlabeled packets
-#constrain packet { send recv }
-#          ((t1 == kernel_t) or ((t2 != unlabeled_t) ));
-
 define(`basic_ubac_conditions',`
 	ifdef(`enable_ubac',`
 		u1 == u2
@@ -122,19 +117,6 @@ constrain process dyntransition
 	or ( t1 == can_change_process_identity and t2 == process_user_target )
 );
 
-# Constrain access to memory mapping file objects
-# One scenario in which this is useful is for a series of 
-# filters where, once filterA is done processing/modifying it, it passes
-# it to filterB. If filterA had memory mapped the file, it
-# could make changes after filterB had begun processing the file giving filterA
-# the opporunity to send malicious or sensitive information compromising the security
-# goals of the system.
-# Use the "files_not_mappable_file(<type_name>)" interface call to prevent mapping of a file type.
-constrain { dir file blk_file chr_file fifo_file } { map }
-(
-	t2 != not_mappable_file_type
-);
-
 # These permissions do not have ubac constraints:
 # fork
 # setexec
@@ -160,6 +142,7 @@ exempted_ubac_constraint(fd, ubacfd)
 
 exempted_ubac_constraint(socket, ubacsock)
 exempted_ubac_constraint(tcp_socket, ubacsock)
+exempted_ubac_constraint(sctp_socket, ubacsock)
 exempted_ubac_constraint(udp_socket, ubacsock)
 exempted_ubac_constraint(rawip_socket, ubacsock)
 exempted_ubac_constraint(netlink_socket, ubacsock)
@@ -180,6 +163,14 @@ exempted_ubac_constraint(netlink_kobject_uevent_socket, ubacsock)
 exempted_ubac_constraint(appletalk_socket, ubacsock)
 exempted_ubac_constraint(dccp_socket, ubacsock)
 exempted_ubac_constraint(tun_socket, ubacsock)
+exempted_ubac_constraint(netlink_iscsi_socket, ubacsock)
+exempted_ubac_constraint(netlink_fib_lookup_socket, ubacsock)
+exempted_ubac_constraint(netlink_connector_socket, ubacsock)
+exempted_ubac_constraint(netlink_netfilter_socket, ubacsock)
+exempted_ubac_constraint(netlink_generic_socket, ubacsock)
+exempted_ubac_constraint(netlink_scsitransport_socket, ubacsock)
+exempted_ubac_constraint(netlink_rdma_socket, ubacsock)
+exempted_ubac_constraint(netlink_crypto_socket, ubacsock)
 
 constrain socket_class_set { create relabelto relabelfrom } 
 (

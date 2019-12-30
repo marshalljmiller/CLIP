@@ -254,24 +254,6 @@ interface(`unconfined_signal',`
 
 ########################################
 ## <summary>
-##	Send generic signals to the unconfined domain.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`unconfined_setsched',`
-	gen_require(`
-		type unconfined_t;
-	')
-
-	allow $1 unconfined_t:process setsched;
-')
-
-########################################
-## <summary>
 ##	Read unconfined domain unnamed pipes.
 ## </summary>
 ## <param name="domain">
@@ -459,6 +441,43 @@ interface(`unconfined_create_keys',`
 
 ########################################
 ## <summary>
+##	Dontaudit write process information for unconfined process.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`unconfined_dontaudit_write_state',`
+	gen_require(`
+		type unconfined_t;
+	')
+
+	dontaudit $1 unconfined_t:file write;
+')
+
+########################################
+## <summary>
+##	Dontaudit read process information for unconfined process.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`unconfined_dontaudit_read_state',`
+	gen_require(`
+		type unconfined_t;
+	')
+
+	dontaudit $1 unconfined_t:dir list_dir_perms;
+	dontaudit $1 unconfined_t:file read_file_perms;
+')
+
+########################################
+## <summary>
 ##	Write keys for the unconfined domain.
 ## </summary>
 ## <param name="domain">
@@ -492,6 +511,26 @@ interface(`unconfined_dbus_send',`
 	')
 
 	allow $1 unconfined_t:dbus send_msg;
+	allow unconfined_t $1:dbus send_msg;
+')
+
+########################################
+## <summary>
+##	Create communication channel with unconfined domain over dbus.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`unconfined_dbus_acquire_svc',`
+	gen_require(`
+		type unconfined_t;
+		class dbus acquire_svc;
+	')
+
+	allow $1 unconfined_t:dbus acquire_svc;
 ')
 
 ########################################
@@ -573,7 +612,7 @@ interface(`unconfined_rw_shm',`
 
 ########################################
 ## <summary>
-##	Allow apps to set rlimits on userdomain
+##	Allow apps to set rlimits on unconfined user
 ## </summary>
 ## <param name="domain">
 ##	<summary>
@@ -587,6 +626,24 @@ interface(`unconfined_set_rlimitnh',`
 	')
 
 	allow $1 unconfined_t:process rlimitinh;
+')
+
+########################################
+## <summary>
+##	Allow apps to setsched on unconfined user
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`unconfined_setsched',`
+	gen_require(`
+		type unconfined_t;
+	')
+
+	allow $1 unconfined_t:process setsched;
 ')
 
 ########################################
@@ -669,3 +726,40 @@ interface(`unconfined_transition',`
 	allow unconfined_t $2:file entrypoint;
 	allow $1 unconfined_t:process signal_perms;
 ')
+
+########################################
+## <summary>
+##	unconfined_t domain typebounds calling domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain to be typebound.
+## </summary>
+## </param>
+#
+interface(`unconfined_typebounds',`
+	gen_require(`
+		type unconfined_t;
+	')
+
+	typebounds unconfined_t $1;
+')
+
+########################################
+## <summary>
+##	unconfined_exec_t domain typebounds file_type.
+## </summary>
+## <param name="domain">
+## <summary>
+##	File type to be typebound.
+## </summary>
+## </param>
+#
+interface(`unconfined_exec_typebounds',`
+	gen_require(`
+		type unconfined_exec_t;
+	')
+
+	typebounds unconfined_exec_t $1;
+')
+

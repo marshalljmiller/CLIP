@@ -98,26 +98,6 @@ interface(`clamav_search_lib',`
 
 ########################################
 ## <summary>
-##	Read clamav libraries.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`clamav_read_lib',`
-	gen_require(`
-		type clamd_var_lib_t;
-	')
-
-	files_search_var_lib($1)
-	allow $1 clamd_var_lib_t:dir search_dir_perms;
-	allow $1 clamd_var_lib_t:file read_file_perms;
-')
-
-########################################
-## <summary>
 ##	Execute a domain transition to run clamscan.
 ## </summary>
 ## <param name="domain">

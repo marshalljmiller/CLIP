@@ -37,8 +37,8 @@ files_pid_file(dhcpd_var_run_t)
 # Local policy
 #
 
-allow dhcpd_t self:capability { chown dac_override sys_chroot net_raw setgid setuid setpcap sys_resource };
-dontaudit dhcpd_t self:capability { net_admin sys_tty_config };
+allow dhcpd_t self:capability { chown dac_read_search dac_override fowner sys_chroot net_raw kill setgid setuid setpcap sys_resource };
+dontaudit dhcpd_t self:capability { net_admin sys_admin sys_tty_config };
 allow dhcpd_t self:process { getcap setcap signal_perms };
 allow dhcpd_t self:fifo_file rw_fifo_file_perms;
 allow dhcpd_t self:tcp_socket { accept listen };
@@ -47,6 +47,7 @@ allow dhcpd_t self:rawip_socket create_socket_perms;
 
 manage_files_pattern(dhcpd_t, dhcpd_state_t, dhcpd_state_t)
 sysnet_dhcp_state_filetrans(dhcpd_t, dhcpd_state_t, file)
+allow dhcpd_t dhcpd_state_t:file map;
 
 manage_dirs_pattern(dhcpd_t, dhcpd_tmp_t, dhcpd_tmp_t)
 manage_files_pattern(dhcpd_t, dhcpd_tmp_t, dhcpd_tmp_t)
@@ -106,10 +107,8 @@ logging_send_syslog_msg(dhcpd_t)
 sysnet_read_config(dhcpd_t)
 sysnet_read_dhcp_config(dhcpd_t)
 
-optional_policy(`
-	userdom_dontaudit_use_unpriv_user_fds(dhcpd_t)
-	userdom_dontaudit_search_user_home_dirs(dhcpd_t)
-')
+userdom_dontaudit_use_unpriv_user_fds(dhcpd_t)
+userdom_dontaudit_search_user_home_dirs(dhcpd_t)
 
 tunable_policy(`dhcpd_use_ldap',`
     allow dhcpd_t self:tcp_socket create_socket_perms;
@@ -123,12 +122,14 @@ tunable_policy(`dhcpd_use_ldap',`
     corenet_sendrecv_ldap_client_packets(dhcpd_t)
 ')
 
-tunable_policy(`dhcpd_use_ldap',`
-	ldap_read_certs(dhcpd_t)
+optional_policy(`
+    tunable_policy(`dhcpd_use_ldap',`
+	    ldap_read_certs(dhcpd_t)
+    ')
 ')
 
 ifdef(`distro_gentoo',`
-	allow dhcpd_t self:capability { chown dac_override setgid setuid sys_chroot };
+	allow dhcpd_t self:capability { chown dac_read_search  setgid setuid sys_chroot };
 ')
 
 optional_policy(`
@@ -142,8 +143,7 @@ optional_policy(`
 
 optional_policy(`
 	dbus_system_bus_client(dhcpd_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(dhcpd_t)
+	dbus_connect_system_bus(dhcpd_t)
 ')
 
 optional_policy(`

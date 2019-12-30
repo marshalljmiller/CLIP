@@ -34,9 +34,14 @@ dontaudit arpwatch_t self:capability sys_tty_config;
 allow arpwatch_t self:process signal_perms;
 allow arpwatch_t self:unix_stream_socket { accept listen };
 allow arpwatch_t self:tcp_socket { accept listen };
-allow arpwatch_t self:packet_socket create_socket_perms;
+allow arpwatch_t self:packet_socket { create_socket_perms map };
 allow arpwatch_t self:socket create_socket_perms;
 allow arpwatch_t self:netlink_socket create_socket_perms;
+allow arpwatch_t self:netlink_netfilter_socket create_socket_perms;
+
+tunable_policy(`deny_bluetooth',`',`
+    allow arpwatch_t self:bluetooth_socket create_socket_perms;
+')
 
 manage_dirs_pattern(arpwatch_t, arpwatch_data_t, arpwatch_data_t)
 manage_files_pattern(arpwatch_t, arpwatch_data_t, arpwatch_data_t)
@@ -56,6 +61,8 @@ kernel_read_kernel_sysctls(arpwatch_t)
 kernel_read_proc_symlinks(arpwatch_t)
 kernel_request_load_module(arpwatch_t)
 
+corecmd_exec_shell(arpwatch_t)
+
 corenet_all_recvfrom_netlabel(arpwatch_t)
 corenet_tcp_sendrecv_generic_if(arpwatch_t)
 corenet_udp_sendrecv_generic_if(arpwatch_t)
@@ -68,6 +75,7 @@ corenet_udp_sendrecv_all_ports(arpwatch_t)
 
 dev_read_sysfs(arpwatch_t)
 dev_read_usbmon_dev(arpwatch_t)
+dev_map_usbmon_dev(arpwatch_t)
 dev_rw_generic_usb_dev(arpwatch_t)
 
 fs_getattr_all_fs(arpwatch_t)

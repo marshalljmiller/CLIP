@@ -582,6 +582,24 @@ interface(`mta_read_aliases',`
 
 ########################################
 ## <summary>
+##	Mmap mail address aliases.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mta_map_aliases',`
+	gen_require(`
+		type etc_aliases_t;
+	')
+
+	allow $1 etc_aliases_t:file map;
+')
+
+########################################
+## <summary>
 ##	Create, read, write, and delete mail address aliases.
 ## </summary>
 ## <param name="domain">
@@ -598,9 +616,7 @@ interface(`mta_manage_aliases',`
 	files_search_etc($1)
 	manage_files_pattern($1, etc_aliases_t, etc_aliases_t)
 	manage_lnk_files_pattern($1, etc_aliases_t, etc_aliases_t)
-	mta_etc_filetrans_aliases($1, "aliases")
-	mta_etc_filetrans_aliases($1, "aliases.db")
-	mta_etc_filetrans_aliases($1, "aliasesdb-stamp")
+	mta_filetrans_named_content($1)
 ')
 
 ########################################
@@ -897,6 +913,7 @@ interface(`mta_manage_spool',`
 	manage_dirs_pattern($1, mail_spool_t, mail_spool_t)
 	manage_files_pattern($1, mail_spool_t, mail_spool_t)
 	manage_lnk_files_pattern($1, mail_spool_t, mail_spool_t)
+    allow $1 mail_spool_t:file map;
 ')
 
 ########################################
@@ -1142,6 +1159,24 @@ interface(`mta_read_home',`
 
 ####################################
 ## <summary>
+##      ALlow domain to mmap mail content in the homedir
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`mta_mmap_home_rw',`
+        gen_require(`
+                type mail_home_rw_t;
+        ')
+
+		allow $1 mail_home_rw_t:file map;
+')
+
+####################################
+## <summary>
 ##      ALlow domain to read mail content in the homedir
 ## </summary>
 ## <param name="domain">
@@ -1157,6 +1192,7 @@ interface(`mta_read_home_rw',`
 
         userdom_search_user_home_dirs($1)
         read_files_pattern($1, mail_home_rw_t, mail_home_rw_t)
+        list_dirs_pattern($1, mail_home_rw_t, mail_home_rw_t)
 		read_lnk_files_pattern($1, mail_home_rw_t, mail_home_rw_t)
 
         ifdef(`distro_redhat',`
@@ -1210,6 +1246,7 @@ interface(`mta_filetrans_admin_home_content',`
 	')
 
 	userdom_admin_home_dir_filetrans($1, mail_home_t, file, "dead.letter")
+	userdom_admin_home_dir_filetrans($1, mail_home_t, file, ".esmtprc")
 	userdom_admin_home_dir_filetrans($1, mail_home_t, file, ".mailrc")
 	userdom_admin_home_dir_filetrans($1, mail_home_t, file, ".forward")
 	userdom_admin_home_dir_filetrans($1, mail_home_rw_t, dir, "Maildir")
@@ -1234,6 +1271,7 @@ interface(`mta_filetrans_home_content',`
 		type mail_home_rw_t;
 	')
 
+	userdom_user_home_dir_filetrans($1, mail_home_t, file, ".esmtprc")
 	userdom_user_home_dir_filetrans($1, mail_home_t, file, ".mailrc")
 	userdom_user_home_dir_filetrans($1, mail_home_t, file, "dead.letter")
 	userdom_user_home_dir_filetrans($1, mail_home_t, file, ".forward")
@@ -1263,6 +1301,15 @@ interface(`mta_filetrans_named_content',`
 	mta_etc_filetrans_aliases($1, "aliases")
 	mta_etc_filetrans_aliases($1, "aliases.db")
 	mta_etc_filetrans_aliases($1, "aliasesdb-stamp")
+	mta_etc_filetrans_aliases($1, "__db.aliases.db")
+    mta_etc_filetrans_aliases($1, "virtusertable.db")
+    mta_etc_filetrans_aliases($1, "access.db")
+    mta_etc_filetrans_aliases($1, "domaintable.db")
+    filetrans_pattern($1, etc_mail_t, etc_aliases_t, file, "virtusertable.db")
+    filetrans_pattern($1, etc_mail_t, etc_aliases_t, file, "access.db")
+    filetrans_pattern($1, etc_mail_t, etc_aliases_t, file, "domaintable.db")
+    filetrans_pattern($1, etc_mail_t, etc_aliases_t, file, "mailertable.db")
+    filetrans_pattern($1, etc_mail_t, etc_aliases_t, file, "aliasesdb-stamp")
 	mta_filetrans_home_content($1)
 	mta_filetrans_admin_home_content($1)
 ')

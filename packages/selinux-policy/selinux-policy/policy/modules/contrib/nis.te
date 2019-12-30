@@ -123,8 +123,7 @@ userdom_dontaudit_search_user_home_dirs(ypbind_t)
 
 optional_policy(`
 	dbus_system_bus_client(ypbind_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(ypbind_t)
+	dbus_connect_system_bus(ypbind_t)
 	init_dbus_chat_script(ypbind_t)
 
 	optional_policy(`
@@ -140,12 +139,21 @@ optional_policy(`
 	udev_read_db(ypbind_t)
 ')
 
+optional_policy(`
+    rpcbind_stream_connect(ypbind_t)
+')
+
+optional_policy(`
+    sssd_search_lib(ypbind_t)
+    sssd_stream_connect(ypbind_t)
+')
+
 ########################################
 #
 # yppasswdd local policy
 #
 
-allow yppasswdd_t self:capability dac_override;
+allow yppasswdd_t self:capability { dac_read_search  };
 dontaudit yppasswdd_t self:capability sys_tty_config;
 allow yppasswdd_t self:fifo_file rw_fifo_file_perms;
 allow yppasswdd_t self:process { getsched setfscreate signal_perms };
@@ -243,10 +251,11 @@ allow ypserv_t self:process signal_perms;
 allow ypserv_t self:unix_dgram_socket create_socket_perms;
 allow ypserv_t self:unix_stream_socket create_stream_socket_perms;
 allow ypserv_t self:netlink_route_socket r_netlink_socket_perms;
-allow ypserv_t self:tcp_socket connected_stream_socket_perms;
+allow ypserv_t self:tcp_socket { connect connected_stream_socket_perms };
 allow ypserv_t self:udp_socket create_socket_perms;
 
 manage_files_pattern(ypserv_t, var_yp_t, var_yp_t)
+allow ypserv_t var_yp_t:file map;
 
 allow ypserv_t ypserv_conf_t:file read_file_perms;
 
@@ -277,6 +286,7 @@ corenet_udp_bind_all_rpc_ports(ypserv_t)
 corenet_dontaudit_tcp_bind_all_reserved_ports(ypserv_t)
 corenet_dontaudit_udp_bind_all_reserved_ports(ypserv_t)
 corenet_sendrecv_generic_server_packets(ypserv_t)
+corenet_tcp_connect_portmap_port(ypserv_t)
 
 dev_read_sysfs(ypserv_t)
 
@@ -305,6 +315,10 @@ optional_policy(`
 
 optional_policy(`
 	udev_read_db(ypserv_t)
+')
+
+optional_policy(`
+    rpcbind_stream_connect(ypserv_t)
 ')
 
 ########################################
@@ -351,5 +365,12 @@ files_search_usr(ypxfr_t)
 
 logging_send_syslog_msg(ypxfr_t)
 
-
 sysnet_read_config(ypxfr_t)
+
+optional_policy(`
+    rpcbind_stream_connect(ypxfr_t)
+')
+
+optional_policy(`
+    sssd_search_lib(ypxfr_t)
+')

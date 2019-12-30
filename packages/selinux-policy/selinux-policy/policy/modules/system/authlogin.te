@@ -5,19 +5,19 @@ policy_module(authlogin, 2.5.1)
 # Declarations
 #
 
-### <desc>
-### <p>
-### Allow users to login using a radius server
-### </p>
-### </desc>
-#gen_tunable(authlogin_radius, false)
+## <desc>
+## <p>
+## Allow users to login using a radius server
+## </p>
+## </desc>
+gen_tunable(authlogin_radius, false)
 
-### <desc>
-### <p>
-### Allow users to login using a yubikey OTP server or challenge response mode
-### </p>
-### </desc>
-#gen_tunable(authlogin_yubikey, false)
+## <desc>
+## <p>
+## Allow users to login using a yubikey OTP server or challenge response mode
+## </p>
+## </desc>
+gen_tunable(authlogin_yubikey, false)
 
 ## <desc>
 ## <p>
@@ -29,8 +29,6 @@ gen_tunable(authlogin_nsswitch_use_ldap, false)
 attribute can_read_shadow_passwords;
 attribute can_write_shadow_passwords;
 attribute can_relabelto_shadow_passwords;
-attribute can_read_oshadow_passwords;
-attribute can_write_oshadow_passwords;
 attribute polydomain;
 attribute nsswitch_domain;
 attribute login_pgm;
@@ -39,9 +37,7 @@ type auth_cache_t;
 logging_log_file(auth_cache_t)
 
 type auth_home_t;
-optional_policy(`
-	userdom_user_home_content(auth_home_t)
-')
+userdom_user_home_content(auth_home_t)
 
 type chkpwd_t, can_read_shadow_passwords;
 type chkpwd_exec_t;
@@ -87,11 +83,6 @@ neverallow ~can_read_shadow_passwords shadow_t:file read;
 neverallow ~can_write_shadow_passwords shadow_t:file { create write };
 neverallow ~can_relabelto_shadow_passwords shadow_t:file relabelto;
 
-type oshadow_t;
-files_auth_file(oshadow_t)
-neverallow ~can_read_oshadow_passwords oshadow_t:file read;
-neverallow ~can_write_oshadow_passwords oshadow_t:file { create write };
-
 type passwd_file_t;
 files_type(passwd_file_t)
 
@@ -121,11 +112,11 @@ logging_log_file(wtmp_t)
 # Check password local policy
 #
 
-allow chkpwd_t self:capability { dac_override setuid };
+allow chkpwd_t self:capability { dac_read_search  setuid };
 dontaudit chkpwd_t self:capability sys_tty_config;
 allow chkpwd_t self:process { getattr signal };
 
-allow chkpwd_t shadow_t:file read_file_perms;
+allow chkpwd_t shadow_t:file { read_file_perms map };
 files_list_etc(chkpwd_t)
 
 kernel_read_crypto_sysctls(chkpwd_t)
@@ -142,6 +133,7 @@ files_read_etc_files(chkpwd_t)
 files_dontaudit_search_var(chkpwd_t)
 files_read_usr_symlinks(chkpwd_t)
 files_list_tmp(chkpwd_t)
+files_map_system_db_files(chkpwd_t)
 
 fs_dontaudit_getattr_xattr_fs(chkpwd_t)
 
@@ -149,6 +141,7 @@ term_dontaudit_use_console(chkpwd_t)
 term_dontaudit_use_unallocated_ttys(chkpwd_t)
 term_dontaudit_use_generic_ptys(chkpwd_t)
 term_dontaudit_use_all_ptys(chkpwd_t)
+term_use_usb_ttys(chkpwd_t)
 
 auth_use_nsswitch(chkpwd_t)
 
@@ -159,9 +152,7 @@ logging_send_syslog_msg(chkpwd_t)
 seutil_read_config(chkpwd_t)
 seutil_dontaudit_use_newrole_fds(chkpwd_t)
 
-optional_policy(`
-	userdom_dontaudit_use_user_ttys(chkpwd_t)
-')
+userdom_dontaudit_use_user_ttys(chkpwd_t)
 
 ifdef(`distro_ubuntu',`
 	optional_policy(`
@@ -174,13 +165,17 @@ optional_policy(`
 	apache_dontaudit_rw_tcp_sockets(chkpwd_t)
 ')
 
-#optional_policy(`
-#	kerberos_use(chkpwd_t)
-#')
+optional_policy(`
+    	dbus_system_bus_client(chkpwd_t)
+')
 
-#optional_policy(`
-#	nis_authenticate(chkpwd_t)
-#')
+optional_policy(`
+	kerberos_use(chkpwd_t)
+')
+
+optional_policy(`
+	nis_authenticate(chkpwd_t)
+')
 
 ########################################
 #
@@ -326,9 +321,7 @@ miscfiles_read_generic_certs(pam_console_t)
 
 seutil_read_file_contexts(pam_console_t)
 
-optional_policy(`
-	userdom_dontaudit_use_unpriv_user_fds(pam_console_t)
-')
+userdom_dontaudit_use_unpriv_user_fds(pam_console_t)
 
 ifdef(`distro_ubuntu',`
 	optional_policy(`
@@ -364,7 +357,7 @@ optional_policy(`
 # updpwd local policy
 #
 
-allow updpwd_t self:capability { chown dac_override };
+allow updpwd_t self:capability { chown dac_read_search fsetid };
 allow updpwd_t self:process setfscreate;
 allow updpwd_t self:fifo_file rw_fifo_file_perms;
 allow updpwd_t self:unix_stream_socket create_stream_socket_perms;
@@ -376,7 +369,6 @@ dev_read_urand(updpwd_t)
 
 files_manage_etc_files(updpwd_t)
 auth_manage_passwd(updpwd_t)
-auth_manage_oshadow(updpwd_t)
 
 mls_file_read_all_levels(updpwd_t)
 mls_file_write_all_levels(updpwd_t)
@@ -386,13 +378,12 @@ term_dontaudit_use_console(updpwd_t)
 term_dontaudit_use_unallocated_ttys(updpwd_t)
 
 auth_manage_shadow(updpwd_t)
+auth_etc_filetrans_shadow(updpwd_t)
 auth_use_nsswitch(updpwd_t)
 
 logging_send_syslog_msg(updpwd_t)
 
-optional_policy(`
-	userdom_use_inherited_user_terminals(updpwd_t)
-')
+userdom_use_inherited_user_terminals(updpwd_t)
 
 ifdef(`distro_ubuntu',`
 	optional_policy(`
@@ -428,11 +419,9 @@ domain_use_interactive_fds(utempter_t)
 
 logging_search_logs(utempter_t)
 
-optional_policy(`
-	userdom_use_inherited_user_terminals(utempter_t)
-	# Allow utemper to write to /tmp/.xses-*
-	userdom_write_user_tmp_files(utempter_t)
-')
+userdom_use_inherited_user_terminals(utempter_t)
+# Allow utemper to write to /tmp/.xses-*
+userdom_write_user_tmp_files(utempter_t)
 
 ifdef(`distro_ubuntu',`
 	optional_policy(`
@@ -445,15 +434,17 @@ optional_policy(`
 	xserver_rw_xdm_pipes(utempter_t)
 ')
 
-#tunable_policy(`polyinstantiation_enabled',`
-#	files_polyinstantiate_all(polydomain)
-#')
+files_filetrans_tmp_named_files(polydomain)
 
-#optional_policy(`
-#	tunable_policy(`polyinstantiation_enabled',`
-#		namespace_init_domtrans(polydomain)
-#	')
-#')
+tunable_policy(`polyinstantiation_enabled',`
+	files_polyinstantiate_all(polydomain)
+')
+
+optional_policy(`
+	tunable_policy(`polyinstantiation_enabled',`
+		namespace_init_domtrans(polydomain)
+	')
+')
 
 ######################################
 #
@@ -463,13 +454,14 @@ optional_policy(`
 allow nsswitch_domain self:key manage_key_perms;
 
 auth_read_passwd(nsswitch_domain)
+auth_map_passwd(nsswitch_domain)
 
 files_list_var_lib(nsswitch_domain)
 
 # read /etc/nsswitch.conf
 files_read_etc_files(nsswitch_domain)
 
-#sysnet_dns_name_resolve(nsswitch_domain)
+sysnet_dns_name_resolve(nsswitch_domain)
 
 systemd_hostnamed_read_config(nsswitch_domain)
 
@@ -478,38 +470,42 @@ tunable_policy(`authlogin_nsswitch_use_ldap',`
     allow nsswitch_domain self:tcp_socket create_socket_perms;
 ')
 
-#tunable_policy(`authlogin_nsswitch_use_ldap',`
-#	corenet_tcp_sendrecv_generic_if(nsswitch_domain)
-#	corenet_tcp_sendrecv_generic_node(nsswitch_domain)
-#	corenet_tcp_sendrecv_ldap_port(nsswitch_domain)
-#	corenet_tcp_connect_ldap_port(nsswitch_domain)
-#	corenet_sendrecv_ldap_client_packets(nsswitch_domain)
-#')
+tunable_policy(`authlogin_nsswitch_use_ldap',`
+	corenet_tcp_sendrecv_generic_if(nsswitch_domain)
+	corenet_tcp_sendrecv_generic_node(nsswitch_domain)
+	corenet_tcp_sendrecv_ldap_port(nsswitch_domain)
+	corenet_tcp_connect_ldap_port(nsswitch_domain)
+	corenet_sendrecv_ldap_client_packets(nsswitch_domain)
+')
 
-#tunable_policy(`authlogin_nsswitch_use_ldap',`
+tunable_policy(`authlogin_nsswitch_use_ldap',`
 	# Support for LDAPS
-#	dev_read_rand(nsswitch_domain)
-#	# LDAP Configuration using encrypted requires
-#	dev_read_urand(nsswitch_domain)
-#	sysnet_read_config(nsswitch_domain)
-#')
+	dev_read_rand(nsswitch_domain)
+	# LDAP Configuration using encrypted requires
+	dev_read_urand(nsswitch_domain)
+	sysnet_read_config(nsswitch_domain)
+')
 
-#tunable_policy(`authlogin_nsswitch_use_ldap',`
-#	miscfiles_read_generic_certs(nsswitch_domain)
-#')
+tunable_policy(`authlogin_nsswitch_use_ldap',`
+	miscfiles_read_generic_certs(nsswitch_domain)
+')
 
-#optional_policy(`
-#	tunable_policy(`authlogin_nsswitch_use_ldap',`
-#		dirsrv_stream_connect(nsswitch_domain)
-#	')
-#')
+optional_policy(`
+	tunable_policy(`authlogin_nsswitch_use_ldap',`
+		dirsrv_stream_connect(nsswitch_domain)
+	')
+')
 
-#optional_policy(`
-#	tunable_policy(`authlogin_nsswitch_use_ldap',`
-#        ldap_read_certs(nsswitch_domain)
-#		ldap_stream_connect(nsswitch_domain)
-#	')
-#')
+optional_policy(`
+	tunable_policy(`authlogin_nsswitch_use_ldap',`
+        ldap_read_certs(nsswitch_domain)
+		ldap_stream_connect(nsswitch_domain)
+	')
+')
+
+optional_policy(`
+    dbus_system_bus_client(nsswitch_domain)
+')
 
 optional_policy(`
 	avahi_stream_connect(nsswitch_domain)
@@ -524,13 +520,13 @@ optional_policy(`
 	kerberos_use(nsswitch_domain)
 ')
 
-#optional_policy(`
-#	nis_use_ypbind(nsswitch_domain)
-#')
+optional_policy(`
+	nis_use_ypbind(nsswitch_domain)
+')
 
-#optional_policy(`
-#	nscd_use(nsswitch_domain)
-#')
+optional_policy(`
+	nscd_use(nsswitch_domain)
+')
 
 optional_policy(`
 	nslcd_stream_connect(nsswitch_domain)
@@ -543,9 +539,7 @@ optional_policy(`
 ')
 
 #1134389
-optional_policy(`
-	userdom_manage_all_users_keys(nsswitch_domain)
-')
+userdom_manage_all_users_keys(nsswitch_domain)
 optional_policy(`
     sssd_manage_keys(nsswitch_domain)
 ')
@@ -554,12 +548,16 @@ optional_policy(`
     rolekit_manage_keys(nsswitch_domain)
 ')
 
-#optional_policy(`
-#	samba_stream_connect_winbind(nsswitch_domain)
-#    samba_stream_connect_nmbd(nsswitch_domain)
-#	samba_read_var_files(nsswitch_domain)
-#	samba_dontaudit_write_var_files(nsswitch_domain)
-#')
+optional_policy(`
+	samba_stream_connect_winbind(nsswitch_domain)
+    samba_stream_connect_nmbd(nsswitch_domain)
+	samba_read_var_files(nsswitch_domain)
+	samba_dontaudit_write_var_files(nsswitch_domain)
+')
+
+optional_policy(`
+    virt_read_lib_files(nsswitch_domain)
+')
 
 #######################################
 #
@@ -575,9 +573,8 @@ allow login_pgm self:capability ipc_lock;
 dontaudit login_pgm self:capability net_admin;
 allow login_pgm self:process setkeycreate;
 allow login_pgm self:key manage_key_perms;
-optional_policy(`
-	userdom_manage_all_users_keys(login_pgm)
-')
+userdom_manage_all_users_keys(login_pgm)
+allow login_pgm nsswitch_domain:key manage_key_perms;
 
 files_list_var_lib(login_pgm)
 manage_dirs_pattern(login_pgm, var_auth_t, var_auth_t)
@@ -588,6 +585,7 @@ manage_dirs_pattern(login_pgm, auth_cache_t, auth_cache_t)
 manage_files_pattern(login_pgm, auth_cache_t, auth_cache_t)
 manage_sock_files_pattern(login_pgm, auth_cache_t, auth_cache_t)
 files_var_filetrans(login_pgm, auth_cache_t, dir, "coolkey")
+allow login_pgm auth_cache_t:file map;
 
 manage_dirs_pattern(login_pgm, auth_home_t, auth_home_t)
 manage_files_pattern(login_pgm, auth_home_t, auth_home_t)
@@ -598,15 +596,15 @@ auth_filetrans_home_content(login_pgm)
 kernel_search_network_sysctl(login_pgm)
 kernel_rw_afs_state(login_pgm)
 
-#tunable_policy(`authlogin_radius',`
-#	corenet_udp_bind_all_unreserved_ports(login_pgm)
-#')
+tunable_policy(`authlogin_radius',`
+	corenet_udp_bind_all_unreserved_ports(login_pgm)
+')
 
-#tunable_policy(`authlogin_yubikey',`
-#	corenet_tcp_connect_http_port(login_pgm)
-#')
+tunable_policy(`authlogin_yubikey',`
+	corenet_tcp_connect_http_port(login_pgm)
+')
 
-#corenet_tcp_connect_pki_ca_port(login_pgm)
+corenet_tcp_connect_pki_ca_port(login_pgm)
 
 # for fingerprint readers
 dev_rw_input_dev(login_pgm)
@@ -619,6 +617,9 @@ fs_manage_cgroup_dirs(login_pgm)
 fs_manage_cgroup_files(login_pgm)
 fs_read_ecryptfs_symlinks(login_pgm)
 fs_read_ecryptfs_files(login_pgm)
+
+#fs_manage_kdbus_files(login_pgm)
+#fs_manage_kdbus_dirs(login_pgm)
 
 selinux_validate_context(login_pgm)
 selinux_compute_access_vector(login_pgm)
@@ -642,15 +643,13 @@ seutil_read_login_config(login_pgm)
 seutil_read_default_contexts(login_pgm)
 systemd_login_read_pid_files(login_pgm)
 
-optional_policy(`
-	userdom_set_rlimitnh(login_pgm)
-	userdom_read_user_home_content_symlinks(login_pgm)
-	userdom_delete_user_tmp_files(login_pgm)
-	userdom_search_admin_dir(login_pgm)
-	userdom_stream_connect(login_pgm)
-	userdom_manage_user_tmp_dirs(login_pgm)
-	userdom_manage_user_tmp_files(login_pgm)
-')
+userdom_set_rlimitnh(login_pgm)
+userdom_read_user_home_content_symlinks(login_pgm)
+userdom_delete_user_tmp_files(login_pgm)
+userdom_search_admin_dir(login_pgm)
+userdom_stream_connect(login_pgm)
+userdom_manage_user_tmp_dirs(login_pgm)
+userdom_manage_user_tmp_files(login_pgm)
 
 optional_policy(`
 	afs_read_config(login_pgm)

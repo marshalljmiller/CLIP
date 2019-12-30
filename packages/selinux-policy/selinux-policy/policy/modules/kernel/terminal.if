@@ -615,6 +615,23 @@ interface(`term_dontaudit_manage_pty_dirs',`
 
 ########################################
 ## <summary>
+##	Get the attributes of generic pty devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to allow
+##	</summary>
+## </param>
+#
+interface(`term_getattr_generic_ptys',`
+	gen_require(`
+		type devpts_t;
+	')
+
+	allow $1 devpts_t:chr_file getattr;
+')
+########################################
+## <summary>
 ##	Do not audit attempts to get the attributes
 ##	of generic pty devices.
 ## </summary>
@@ -1181,6 +1198,28 @@ interface(`term_getattr_unallocated_ttys',`
 	dev_list_all_dev_nodes($1)
 	allow $1 tty_device_t:chr_file getattr;
 ')
+
+########################################
+## <summary>
+##	Allow open access for all unallocated
+##	tty device nodes.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`term_open_unallocated_ttys',`
+	gen_require(`
+		type tty_device_t;
+	')
+
+	dev_list_all_dev_nodes($1)
+	allow $1 tty_device_t:chr_file open;
+')
+
+
 
 ########################################
 ## <summary>

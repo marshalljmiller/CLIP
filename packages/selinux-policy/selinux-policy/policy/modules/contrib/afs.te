@@ -72,7 +72,7 @@ role system_r types afs_vlserver_t;
 # afs client local policy
 #
 
-allow afs_t self:capability { dac_override sys_admin sys_nice sys_tty_config };
+allow afs_t self:capability { dac_read_search  sys_admin sys_nice sys_tty_config };
 allow afs_t self:process { setsched signal };
 allow afs_t self:fifo_file rw_file_perms;
 allow afs_t self:unix_stream_socket { accept listen };
@@ -119,8 +119,11 @@ can_exec(afs_bosserver_t, afs_bosserver_exec_t)
 
 manage_dirs_pattern(afs_bosserver_t, afs_config_t, afs_config_t)
 manage_files_pattern(afs_bosserver_t, afs_config_t, afs_config_t)
+filetrans_pattern(afs_bosserver_t, afs_files_t, afs_config_t, dir, "local")
 
-allow afs_bosserver_t afs_dbdir_t:dir list_dir_perms;
+manage_files_pattern(afs_bosserver_t, afs_dbdir_t, afs_dbdir_t)
+manage_dirs_pattern(afs_bosserver_t, afs_dbdir_t, afs_dbdir_t)
+filetrans_pattern(afs_bosserver_t, afs_files_t, afs_dbdir_t, dir, "db")
 
 allow afs_bosserver_t afs_fsserver_t:process signal_perms;
 domtrans_pattern(afs_bosserver_t, afs_fsserver_exec_t, afs_fsserver_t)
@@ -152,12 +155,16 @@ files_list_home(afs_bosserver_t)
 
 seutil_read_config(afs_bosserver_t)
 
+optional_policy(`
+    kerberos_read_config(afs_bosserver_t)
+')
+
 ########################################
 #
 # fileserver local policy
 #
 
-allow afs_fsserver_t self:capability { kill dac_override chown fowner sys_nice };
+allow afs_fsserver_t self:capability { kill dac_read_search  chown fowner sys_nice };
 dontaudit afs_fsserver_t self:capability fsetid;
 allow afs_fsserver_t self:process { setsched signal_perms };
 allow afs_fsserver_t self:fifo_file rw_fifo_file_perms;

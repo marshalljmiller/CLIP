@@ -5,6 +5,14 @@ policy_module(colord, 1.1.0)
 # Declarations
 #
 
+## <desc>
+##	<p>
+##	Determine whether Colord can access
+##	nfs file systems.
+##	</p>
+## </desc>
+gen_tunable(colord_use_nfs, false)
+
 type colord_t;
 type colord_exec_t;
 dbus_system_domain(colord_t, colord_exec_t)
@@ -27,7 +35,7 @@ systemd_unit_file(colord_unit_file_t)
 # Local policy
 #
 
-allow colord_t self:capability { dac_read_search dac_override };
+allow colord_t self:capability { dac_read_search  };
 dontaudit colord_t self:capability sys_admin;
 allow colord_t self:process signal;
 
@@ -37,14 +45,6 @@ allow colord_t self:tcp_socket create_stream_socket_perms;
 allow colord_t self:shm create_shm_perms;
 allow colord_t self:udp_socket create_socket_perms;
 allow colord_t self:unix_dgram_socket create_socket_perms;
-
-optional_policy(`
-    gen_require(`
-        class dbus acquire_svc;
-    ')
-    # Allow colord to listen on org.freedesktop.ColorManager
-    allow colord_t self:dbus acquire_svc;
-')
 
 manage_dirs_pattern(colord_t, colord_tmp_t, colord_tmp_t)
 manage_files_pattern(colord_t, colord_tmp_t, colord_tmp_t)
@@ -119,11 +119,13 @@ init_read_state(colord_t)
 logging_send_syslog_msg(colord_t)
 
 systemd_read_logind_sessions_files(colord_t)
+systemd_hwdb_manage_config(colord_t)
 
 userdom_rw_user_tmp_files(colord_t)
 userdom_home_reader(colord_t)
 userdom_list_user_home_content(colord_t)
 userdom_read_inherited_user_home_content_files(colord_t)
+userdom_map_user_home_files(colord_t)
 
 optional_policy(`
 	cups_read_config(colord_t)
@@ -138,6 +140,7 @@ optional_policy(`
 	gnome_read_home_icc_data_content(colord_t)
 	# Fixes lots of breakage in F16 on upgrade
 	gnome_read_generic_data_home_files(colord_t)
+    gnome_map_generic_data_home_files(colord_t)
 ')
 
 optional_policy(`
@@ -152,6 +155,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+	systemd_hwdb_read_config(colord_t)
+')
+
+optional_policy(`
 	udev_read_db(colord_t)
 	udev_read_pid_files(colord_t)
 ')
@@ -163,8 +170,20 @@ optional_policy(`
 	xserver_read_inherited_xdm_lib_files(colord_t)
     # allow to read /run/initial-setup-$username
     xserver_read_xdm_pid(colord_t)
+    xserver_map_xdm_pid(colord_t)
 ')
 
 optional_policy(`
 	zoneminder_rw_tmpfs_files(colord_t)
+')
+
+tunable_policy(`colord_use_nfs',`
+	fs_manage_nfs_dirs(colord_t)
+	fs_manage_nfs_files(colord_t)
+	fs_manage_nfs_symlinks(colord_t)
+    fs_mmap_nfs_files(colord_t)
+')
+
+tunable_policy(`use_ecryptfs_home_dirs',`
+	fs_manage_ecryptfs_files(colord_t)
 ')

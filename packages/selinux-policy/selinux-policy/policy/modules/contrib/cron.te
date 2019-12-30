@@ -167,7 +167,7 @@ tunable_policy(`fcron_crond',`
 # Cron daemon local policy
 #
 
-allow crond_t self:capability { dac_override chown fowner setgid setuid sys_nice dac_read_search };
+allow crond_t self:capability {  chown fowner setgid setuid sys_nice dac_read_search dac_override };
 dontaudit crond_t self:capability { net_admin sys_resource sys_tty_config };
 allow crond_t self:process ~{ ptrace setcurrent setexec setfscreate execmem execstack execheap };
 allow crond_t self:process { setexec setfscreate };
@@ -182,6 +182,7 @@ allow crond_t self:sem create_sem_perms;
 allow crond_t self:msgq create_msgq_perms;
 allow crond_t self:msg { send receive };
 allow crond_t self:key { search write link };
+allow crond_t self:netlink_selinux_socket create_socket_perms;
 dontaudit crond_t self:netlink_audit_socket nlmsg_tty_audit;
 
 manage_files_pattern(crond_t, cron_log_t, cron_log_t)
@@ -220,7 +221,6 @@ fs_list_inotifyfs(crond_t)
 # need auth_chkpwd to check for locked accounts.
 auth_domtrans_chk_passwd(crond_t)
 auth_manage_var_auth(crond_t)
-auth_manage_faillog(crond_t)
 
 corecmd_exec_shell(crond_t)
 corecmd_list_bin(crond_t)
@@ -268,16 +268,17 @@ seutil_read_default_contexts(crond_t)
 seutil_sigchld_newrole(crond_t)
 
 
-optional_policy(`
-	userdom_use_unpriv_users_fds(crond_t)
-	# Not sure why this is needed
-	userdom_list_user_home_dirs(crond_t)
-	userdom_list_admin_dir(crond_t)
-	userdom_manage_all_users_keys(crond_t)
-')
+userdom_use_unpriv_users_fds(crond_t)
+# Not sure why this is needed
+userdom_list_user_home_dirs(crond_t)
+userdom_list_admin_dir(crond_t)
+userdom_manage_all_users_keys(crond_t)
 
-mta_send_mail(crond_t)
-mta_system_content(cron_spool_t)
+optional_policy(`
+	mta_send_mail(crond_t)
+	mta_filetrans_admin_home_content(crond_t)
+	mta_system_content(cron_spool_t)
+')
 
 ifdef(`distro_debian',`
 	# pam_limits is used
@@ -350,6 +351,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    pcp_read_lib_files(crond_t)
+')
+
+optional_policy(`
 	rpc_search_nfs_state_data(crond_t)
 ')
 
@@ -381,7 +386,7 @@ optional_policy(`
 # System cron process domain
 #
 
-allow system_cronjob_t self:capability { dac_override dac_read_search chown setgid setuid fowner net_bind_service fsetid sys_nice };
+allow system_cronjob_t self:capability {  dac_read_search chown setgid setuid fowner net_bind_service fsetid sys_nice };
 
 allow system_cronjob_t self:process { signal_perms getsched setsched };
 allow system_cronjob_t self:fd use;
@@ -520,12 +525,12 @@ logging_read_generic_logs(system_cronjob_t)
 logging_send_audit_msgs(system_cronjob_t)
 logging_send_syslog_msg(system_cronjob_t)
 
+miscfiles_filetrans_named_content_letsencrypt(system_cronjob_t)
+
 seutil_read_config(system_cronjob_t)
 
-optional_policy(`
-	userdom_manage_tmpfs_files(system_cronjob_t, file)
-	userdom_tmpfs_filetrans(system_cronjob_t, file)
-')
+userdom_manage_tmpfs_files(system_cronjob_t, file)
+userdom_tmpfs_filetrans(system_cronjob_t, file)
 
 ifdef(`distro_redhat',`
 	# Run the rpm program in the rpm_t domain. Allow creation of RPM log files
@@ -566,6 +571,14 @@ optional_policy(`
 ')
 
 optional_policy(`
+    cron_generic_log_filetrans_log_insights(system_cronjob_t)
+')
+
+optional_policy(`
+    chronyd_run_chronyc(system_cronjob_t,system_r)
+')
+
+optional_policy(`
 	cyrus_manage_data(system_cronjob_t)
 ')
 
@@ -580,6 +593,10 @@ optional_policy(`
 
 optional_policy(`
 	exim_read_spool_files(system_cronjob_t)
+')
+
+optional_policy(`
+	firewalld_dbus_chat(system_cronjob_t)
 ')
 
 optional_policy(`
@@ -607,6 +624,7 @@ optional_policy(`
 optional_policy(`
 	mta_read_config(system_cronjob_t)
 	mta_send_mail(system_cronjob_t)
+	mta_filetrans_admin_home_content(system_cronjob_t)
 	mta_system_content(system_cron_spool_t)
 ')
 
@@ -616,6 +634,10 @@ optional_policy(`
 
 optional_policy(`
 	networkmanager_dbus_chat(system_cronjob_t)
+')
+
+optional_policy(`
+    pcp_filetrans_named_content(system_cronjob_t)
 ')
 
 optional_policy(`
@@ -632,6 +654,10 @@ optional_policy(`
 
 optional_policy(`
     rkhunter_manage_lib_files(system_cronjob_t)
+')
+
+optional_policy(`
+    rhsmcertd_dbus_chat(system_cronjob_t)
 ')
 
 optional_policy(`
@@ -669,10 +695,6 @@ optional_policy(`
 	unconfined_shell_domtrans(crond_t)
 	unconfined_dbus_send(crond_t)
 	userdom_filetrans_home_content(crond_t)
-')
-
-optional_policy(`
-	rhsmcertd_domtrans(system_cronjob_t)
 ')
 
 ########################################
@@ -747,19 +769,17 @@ logging_search_logs(cronjob_t)
 seutil_read_config(cronjob_t)
 
 
-optional_policy(`
-	userdom_manage_user_tmp_files(cronjob_t)
-	userdom_manage_user_tmp_symlinks(cronjob_t)
-	userdom_manage_user_tmp_pipes(cronjob_t)
-	userdom_manage_user_tmp_sockets(cronjob_t)
-	# Run scripts in user home directory and access shared libs.
-	userdom_exec_user_home_content_files(cronjob_t)
-	# Access user files and dirs.
-	userdom_manage_user_home_content_files(cronjob_t)
-	userdom_manage_user_home_content_symlinks(cronjob_t)
-	userdom_manage_user_home_content_pipes(cronjob_t)
-	userdom_manage_user_home_content_sockets(cronjob_t)
-')
+userdom_manage_user_tmp_files(cronjob_t)
+userdom_manage_user_tmp_symlinks(cronjob_t)
+userdom_manage_user_tmp_pipes(cronjob_t)
+userdom_manage_user_tmp_sockets(cronjob_t)
+# Run scripts in user home directory and access shared libs.
+userdom_exec_user_home_content_files(cronjob_t)
+# Access user files and dirs.
+userdom_manage_user_home_content_files(cronjob_t)
+userdom_manage_user_home_content_symlinks(cronjob_t)
+userdom_manage_user_home_content_pipes(cronjob_t)
+userdom_manage_user_home_content_sockets(cronjob_t)
 
 list_dirs_pattern(crond_t, user_cron_spool_t, user_cron_spool_t)
 rw_dirs_pattern(crond_t, user_cron_spool_t, user_cron_spool_t)
@@ -785,8 +805,8 @@ optional_policy(`
 # crontab common policy
 #
 
-# dac_override is to create the file in the directory under /tmp
-allow crontab_domain self:capability { fowner setuid setgid chown dac_override };
+#  is to create the file in the directory under /tmp
+allow crontab_domain self:capability { fowner setuid setgid chown dac_read_search dac_override };
 allow crontab_domain self:process { getcap setsched signal_perms };
 allow crontab_domain self:fifo_file rw_fifo_file_perms;
 
@@ -829,15 +849,13 @@ init_read_state(crontab_domain)
 
 seutil_read_config(crontab_domain)
 
-optional_policy(`
-	userdom_manage_user_tmp_dirs(crontab_domain)
-	userdom_manage_user_tmp_files(crontab_domain)
-	# Access terminals.
-	userdom_use_inherited_user_terminals(crontab_domain)
-	# Read user crontabs
-	userdom_read_user_home_content_files(crontab_domain)
-	userdom_read_user_home_content_symlinks(crontab_domain)
-')
+userdom_manage_user_tmp_dirs(crontab_domain)
+userdom_manage_user_tmp_files(crontab_domain)
+# Access terminals.
+userdom_use_inherited_user_terminals(crontab_domain)
+# Read user crontabs
+userdom_read_user_home_content_files(crontab_domain)
+userdom_read_user_home_content_symlinks(crontab_domain)
 
 tunable_policy(`fcron_crond',`
 	# fcron wants an instant update of a crontab change for the administrator

@@ -213,8 +213,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_run_depmod(portage_t, portage_roles)
-	modutils_run_update_mods(portage_t, portage_roles)
+	modutils_run_kmod(portage_t, portage_roles)
 	#dontaudit update_modules_t portage_tmp_t:dir search_dir_perms;
 ')
 
@@ -238,7 +237,7 @@ dontaudit portage_t device_type:blk_file read_blk_file_perms;
 #
 
 allow portage_fetch_t self:process signal;
-allow portage_fetch_t self:capability { dac_override fowner fsetid chown };
+allow portage_fetch_t self:capability { dac_read_search  fowner fsetid chown };
 allow portage_fetch_t self:fifo_file rw_fifo_file_perms;
 allow portage_fetch_t self:tcp_socket { accept listen };
 allow portage_fetch_t self:unix_stream_socket create_socket_perms;

@@ -1,4 +1,4 @@
-policy_module(passanger, 1.1.1)
+policy_module(passenger, 1.1.2)
 
 ########################################
 #
@@ -28,7 +28,7 @@ files_pid_file(passenger_var_run_t)
 # passanger local policy
 #
 
-allow passenger_t self:capability { chown dac_override fsetid fowner kill setuid setgid sys_nice sys_ptrace sys_resource };
+allow passenger_t self:capability { chown dac_read_search  fsetid fowner kill setuid setgid sys_nice sys_ptrace sys_resource };
 allow passenger_t self:capability2 block_suspend;
 allow passenger_t self:process { setpgid setsched getsession signal_perms };
 allow passenger_t self:fifo_file rw_fifo_file_perms;
@@ -67,6 +67,7 @@ corenet_tcp_sendrecv_generic_if(passenger_t)
 corenet_tcp_sendrecv_generic_node(passenger_t)
 corenet_tcp_connect_http_port(passenger_t)
 corenet_tcp_connect_postgresql_port(passenger_t)
+corenet_tcp_connect_mysqld_port(passenger_t)
 
 corecmd_exec_bin(passenger_t)
 corecmd_exec_shell(passenger_t)
@@ -76,6 +77,8 @@ dev_read_urand(passenger_t)
 domain_read_all_domains_state(passenger_t)
 
 auth_use_nsswitch(passenger_t)
+
+fs_getattr_xattr_fs(passenger_t)
 
 logging_send_syslog_msg(passenger_t)
 

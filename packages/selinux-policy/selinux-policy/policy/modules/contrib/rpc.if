@@ -369,6 +369,25 @@ interface(`rpc_list_nfs_state_data',`
 
 ########################################
 ## <summary>
+##	Manage NFS state data in /var/lib/nfs.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_manage_nfs_state_data_dir',`
+	gen_require(`
+		type var_lib_nfs_t;
+	')
+
+	files_search_var_lib($1)
+	allow $1 var_lib_nfs_t:dir manage_dir_perms;
+')
+
+########################################
+## <summary>
 ##	Read NFS state data in /var/lib/nfs.
 ## </summary>
 ## <param name="domain">
@@ -384,6 +403,7 @@ interface(`rpc_read_nfs_state_data',`
 
 	files_search_var_lib($1)
 	read_files_pattern($1, var_lib_nfs_t, var_lib_nfs_t)
+	read_lnk_files_pattern($1, var_lib_nfs_t, var_lib_nfs_t)
 ')
 
 ########################################
@@ -404,6 +424,61 @@ interface(`rpc_manage_nfs_state_data',`
 	files_search_var_lib($1)
 	manage_files_pattern($1, var_lib_nfs_t, var_lib_nfs_t)
 	allow $1 var_lib_nfs_t:file relabel_file_perms;
+')
+
+
+########################################
+## <summary>
+##	Execute domain in gssd domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`rpc_domtrans_gssd',`
+	gen_require(`
+		type gssd_t, gssd_exec_t;
+	')
+
+	domtrans_pattern($1, gssd_exec_t, gssd_t)
+')
+
+########################################
+## <summary>
+##	Write keys for all user domains.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_rw_gssd_keys',`
+	gen_require(`
+		type gssd_t;
+	')
+
+	allow $1 gssd_t:key { read search setattr view write };
+')
+
+########################################
+## <summary>
+##	Transition to alsa named content
+## </summary>
+## <param name="domain">
+##	<summary>
+##      Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_filetrans_var_lib_nfs_content',`
+	gen_require(`
+		type var_lib_nfs_t;
+	')
+
+	files_var_lib_filetrans($1, var_lib_nfs_t, lnk_file, "nfs")
 ')
 
 #######################################
@@ -428,7 +503,7 @@ interface(`rpc_admin',`
 		attribute rpc_domain;
 		type nfsd_initrc_exec_t, rpcd_initrc_exec_t, exports_t;
 		type var_lib_nfs_t, rpcd_var_run_t, gssd_tmp_t;
-		type nfsd_ro_t, nfsd_rw_t, gssd_keytab_t;
+		type  nfsd_rw_t, gssd_keytab_t;
 	')
 
 	allow $1 rpc_domain:process { ptrace signal_perms };
@@ -449,10 +524,67 @@ interface(`rpc_admin',`
 	admin_pattern($1, rpcd_var_run_t)
 
 	files_list_all($1)
-	admin_pattern($1, { nfsd_ro_t nfsd_rw_t })
+	admin_pattern($1, nfsd_rw_t )
 
 	files_list_tmp($1)
 	admin_pattern($1, gssd_tmp_t)
 
 	fs_search_nfsd_fs($1)
+')
+
+########################################
+## <summary>
+##	Read gssd process state files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_read_gssd_state',`
+	gen_require(`
+		type gssd_t;
+	')
+
+	ps_process_pattern($1, gssd_t)
+')
+
+########################################
+## <summary>
+##	Read and write to svirt_image devices.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_gssd_noatsecure',`
+	gen_require(`
+		type gssd_t;
+	')
+
+    allow $1 gssd_t:process { noatsecure rlimitinh };
+')
+
+########################################
+## <summary>
+##	Send and receive messages from
+##	ganesha over dbus.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rpc_dbus_chat_nfsd',`
+	gen_require(`
+		type nfsd_t;
+		class dbus send_msg;
+	')
+
+	allow $1 nfsd_t:dbus send_msg;
+	allow nfsd_t $1:dbus send_msg;
 ')

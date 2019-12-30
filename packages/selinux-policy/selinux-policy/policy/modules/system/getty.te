@@ -44,7 +44,7 @@ ifdef(`enable_mls',`
 #
 
 # Use capabilities.
-allow getty_t self:capability { dac_override chown setgid sys_resource sys_tty_config fowner fsetid };
+allow getty_t self:capability { dac_read_search  dac_override chown setgid sys_resource sys_tty_config fowner fsetid };
 dontaudit getty_t self:capability sys_tty_config;
 allow getty_t self:process { getpgid setpgid getsession signal_perms };
 allow getty_t self:fifo_file rw_fifo_file_perms;
@@ -67,6 +67,7 @@ manage_files_pattern(getty_t, getty_var_run_t, getty_var_run_t)
 files_pid_filetrans(getty_t, getty_var_run_t, file)
 
 kernel_read_system_state(getty_t)
+kernel_read_network_state(getty_t)
 
 # these two needed for receiving faxes
 corecmd_exec_bin(getty_t)
@@ -94,8 +95,11 @@ term_use_unallocated_ttys(getty_t)
 term_setattr_all_ttys(getty_t)
 term_setattr_unallocated_ttys(getty_t)
 term_setattr_console(getty_t)
-term_setattr_usb_ttys(getty_t)
 term_use_console(getty_t)
+term_use_usb_ttys(getty_t)
+term_setattr_usb_ttys(getty_t)
+term_use_all_ptys(getty_t)
+term_setattr_all_ptys(getty_t)
 
 auth_rw_login_records(getty_t)
 auth_use_nsswitch(getty_t)
@@ -131,6 +135,10 @@ tunable_policy(`login_console_enabled',`
 	term_use_console(getty_t)
 ',`
 	term_dontaudit_use_console(getty_t)
+')
+
+optional_policy(`
+    cockpit_read_pid_files(getty_t)
 ')
 
 optional_policy(`

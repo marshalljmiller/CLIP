@@ -42,7 +42,6 @@ mta_mailserver_delivery(postfix_local_t)
 type postfix_map_t;
 type postfix_map_exec_t;
 application_domain(postfix_map_t, postfix_map_exec_t)
-init_domain(postfix_map_t, postfix_map_exec_t)
 role system_r types postfix_map_t;
 
 type postfix_map_tmp_t;
@@ -53,7 +52,6 @@ typealias postfix_master_t alias postfix_t;
 # alias is a hack to make the disable trans bool
 # generation macro work
 mta_mailserver(postfix_t, postfix_master_exec_t)
-init_daemon_domain(postfix_t,postfix_master_exec_t)
 
 type postfix_initrc_exec_t;
 init_script_file(postfix_initrc_exec_t)
@@ -87,10 +85,10 @@ postfix_server_domain_template(smtpd)
 type postfix_spool_t, postfix_spool_type;
 files_spool_file(postfix_spool_t)
 
-type postfix_spool_maildrop_t, postfix_spool_type;
+typealias postfix_spool_t alias postfix_spool_maildrop_t;
 files_spool_file(postfix_spool_maildrop_t)
 
-type postfix_spool_flush_t, postfix_spool_type;
+typealias postfix_spool_t alias postfix_spool_flush_t;
 files_spool_file(postfix_spool_flush_t)
 
 type postfix_public_t;
@@ -111,8 +109,9 @@ mta_mailserver_delivery(postfix_virtual_t)
 # Postfix master process local policy
 #
 
+dontaudit postfix_master_t self:capability { net_admin };
 # chown is to set the correct ownership of queue dirs
-allow postfix_master_t self:capability { chown dac_override kill setgid setuid net_bind_service sys_tty_config };
+allow postfix_master_t self:capability { chown dac_read_search kill setgid setuid net_bind_service sys_tty_config };
 allow postfix_master_t self:capability2 block_suspend;
 
 allow postfix_master_t self:process setrlimit;
@@ -178,6 +177,7 @@ corenet_tcp_sendrecv_all_ports(postfix_master_t)
 corenet_udp_sendrecv_all_ports(postfix_master_t)
 corenet_udp_bind_generic_node(postfix_master_t)
 corenet_udp_bind_all_unreserved_ports(postfix_master_t)
+corenet_tcp_bind_all_unreserved_ports(postfix_master_t)
 corenet_dontaudit_udp_bind_all_ports(postfix_master_t)
 corenet_tcp_bind_generic_node(postfix_master_t)
 corenet_tcp_bind_amavisd_send_port(postfix_master_t)
@@ -200,6 +200,9 @@ domain_use_interactive_fds(postfix_master_t)
 files_search_var_lib(postfix_master_t)
 files_search_tmp(postfix_master_t)
 
+
+init_stream_connect(postfix_master_t)
+
 term_dontaudit_search_ptys(postfix_master_t)
 
 seutil_sigchld_newrole(postfix_master_t)
@@ -207,8 +210,6 @@ seutil_sigchld_newrole(postfix_master_t)
 mta_rw_aliases(postfix_master_t)
 mta_read_sendmail_bin(postfix_master_t)
 mta_getattr_spool(postfix_master_t)
-
-postfix_domtrans_map(postfix_master_t)
 
 ifdef(`distro_redhat',`
 	# for newer main.cf that uses /etc/aliases
@@ -221,8 +222,16 @@ optional_policy(`
 ')
 
 optional_policy(`
+    dbus_system_bus_client(postfix_master_t)
+')
+
+optional_policy(`
 	kerberos_read_keytab(postfix_master_t)
 	kerberos_use(postfix_master_t)
+')
+
+optional_policy(`
+    mysql_read_config(postfix_master_t)
 ')
 
 optional_policy(`
@@ -292,10 +301,16 @@ optional_policy(`
 	mailman_read_data_files(postfix_cleanup_t)
 ')
 
+optional_policy(`
+	milter_stream_connect_all(postfix_cleanup_t)
+')
+
 ########################################
 #
 # Postfix local local policy
 #
+
+allow postfix_local_t self:capability { dac_read_search dac_override };
 
 allow postfix_local_t self:process { setsched setrlimit };
 
@@ -338,6 +353,10 @@ optional_policy(`
 	antivirus_search_db(postfix_local_t)
 	antivirus_exec(postfix_local_t)
 	antivirus_stream_connect(postfix_domain)
+')
+
+optional_policy(`
+    dbus_system_bus_client(postfix_local_t)
 ')
 
 optional_policy(`
@@ -384,12 +403,11 @@ optional_policy(`
 #
 # Postfix map local policy
 #
-allow postfix_map_t self:capability { dac_override setgid setuid };
+allow postfix_map_t self:capability { dac_read_search  setgid setuid };
 allow postfix_map_t self:unix_stream_socket create_stream_socket_perms;
 allow postfix_map_t self:unix_dgram_socket create_socket_perms;
 allow postfix_map_t self:tcp_socket create_stream_socket_perms;
 allow postfix_map_t self:udp_socket create_socket_perms;
-allow postfix_map_t self:netlink_route_socket { bind create getattr read write nlmsg_read };
 
 manage_dirs_pattern(postfix_map_t, postfix_etc_t, postfix_etc_t)
 manage_files_pattern(postfix_map_t, postfix_etc_t, postfix_etc_t)
@@ -403,8 +421,6 @@ kernel_read_kernel_sysctls(postfix_map_t)
 kernel_dontaudit_list_proc(postfix_map_t)
 kernel_dontaudit_read_system_state(postfix_map_t)
 
-init_stream_connect(postfix_map_t)
-
 corenet_all_recvfrom_netlabel(postfix_map_t)
 corenet_tcp_sendrecv_generic_if(postfix_map_t)
 corenet_udp_sendrecv_generic_if(postfix_map_t)
@@ -414,9 +430,6 @@ corenet_tcp_sendrecv_all_ports(postfix_map_t)
 corenet_udp_sendrecv_all_ports(postfix_map_t)
 corenet_tcp_connect_all_ports(postfix_map_t)
 corenet_sendrecv_all_client_packets(postfix_map_t)
-
-sysnet_read_config(postfix_map_t)
-kernel_read_network_state(postfix_map_t)
 
 corecmd_list_bin(postfix_map_t)
 corecmd_read_bin_symlinks(postfix_map_t)
@@ -432,6 +445,8 @@ auth_use_nsswitch(postfix_map_t)
 
 logging_send_syslog_msg(postfix_map_t)
 
+userdom_use_inherited_user_ptys(postfix_map_t)
+
 optional_policy(`
 	locallogin_dontaudit_use_fds(postfix_map_t)
 ')
@@ -445,6 +460,8 @@ optional_policy(`
 #
 # Postfix pickup local policy
 #
+
+dontaudit postfix_pickup_t self:capability net_admin;
 
 allow postfix_pickup_t self:tcp_socket create_socket_perms;
 
@@ -528,6 +545,8 @@ allow postfix_postdrop_t postfix_master_t:unix_stream_socket connectto;
 rw_fifo_files_pattern(postfix_postdrop_t, postfix_public_t, postfix_public_t)
 rw_sock_files_pattern(postfix_postdrop_t, postfix_public_t, postfix_public_t)
 
+rw_fifo_files_pattern(postfix_postdrop_t, postfix_master_t, postfix_master_t)
+
 postfix_list_spool(postfix_postdrop_t)
 manage_files_pattern(postfix_postdrop_t, postfix_spool_maildrop_t, postfix_spool_maildrop_t)
 
@@ -598,6 +617,8 @@ optional_policy(`
 # Postfix qmgr local policy
 #
 
+dontaudit postfix_qmgr_t self:capability { net_admin };
+
 stream_connect_pattern(postfix_qmgr_t, { postfix_private_t postfix_public_t }, { postfix_private_t postfix_public_t }, postfix_master_t)
 
 rw_fifo_files_pattern(postfix_qmgr_t, postfix_public_t, postfix_public_t)
@@ -639,6 +660,10 @@ allow postfix_showq_t postfix_spool_maildrop_t:lnk_file read_lnk_file_perms;
 # to write the mailq output, it really should not need read access!
 term_use_all_ptys(postfix_showq_t)
 term_use_all_ttys(postfix_showq_t)
+
+optional_policy(`
+    logwatch_dontaudit_leaks(postfix_showq_t)
+')
 
 ########################################
 #
@@ -757,7 +782,6 @@ userdom_filetrans_home_content(postfix_virtual_t)
 allow postfix_domain self:capability { sys_nice sys_chroot };
 dontaudit postfix_domain self:capability sys_tty_config;
 allow postfix_domain self:process { signal_perms setpgid setsched };
-allow postfix_domain self:netlink_route_socket { bind create getattr read write nlmsg_read };
 allow postfix_domain self:unix_dgram_socket create_socket_perms;
 allow postfix_domain self:unix_stream_socket create_stream_socket_perms;
 allow postfix_domain self:unix_stream_socket connectto;
@@ -782,6 +806,7 @@ files_pid_filetrans(postfix_domain, postfix_var_run_t, file)
 
 kernel_read_network_state(postfix_domain)
 kernel_read_all_sysctls(postfix_domain)
+kernel_dontaudit_request_load_module(postfix_domain)
 
 dev_read_sysfs(postfix_domain)
 dev_read_rand(postfix_domain)
@@ -801,6 +826,7 @@ files_read_usr_symlinks(postfix_domain)
 files_search_spool(postfix_domain)
 files_list_tmp(postfix_domain)
 files_search_all_mountpoints(postfix_domain)
+files_map_system_db_files(postfix_domain)
 
 init_dontaudit_use_fds(postfix_domain)
 init_sigchld(postfix_domain)
@@ -812,12 +838,11 @@ mta_read_aliases(postfix_domain)
 
 miscfiles_read_generic_certs(postfix_domain)
 
-sysnet_read_config(postfix_domain)
-
 userdom_dontaudit_use_unpriv_user_fds(postfix_domain)
 
 optional_policy(`
 	mysql_stream_connect(postfix_domain)
+    mysql_rw_db_sockets(postfix_domain)
 ')
 
 optional_policy(`

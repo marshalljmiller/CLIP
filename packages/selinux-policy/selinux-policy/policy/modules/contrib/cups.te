@@ -134,18 +134,19 @@ optional_policy(`
 # Cups local policy
 #
 
-allow cupsd_t self:capability { ipc_lock sys_admin dac_override dac_read_search kill fsetid fowner chown dac_override sys_resource sys_tty_config };
+allow cupsd_t self:capability { ipc_lock sys_admin dac_read_search dac_override kill fsetid fowner chown  sys_resource sys_tty_config };
 dontaudit cupsd_t self:capability { sys_tty_config net_admin };
-allow cupsd_t self:capability2 block_suspend;
+allow cupsd_t self:capability2 { block_suspend wake_alarm };
 allow cupsd_t self:process { getpgid setpgid setsched };
 allow cupsd_t self:unix_stream_socket { accept connectto listen };
 allow cupsd_t self:netlink_selinux_socket create_socket_perms;
+allow cupsd_t self:socket connect;
 allow cupsd_t self:shm create_shm_perms;
 allow cupsd_t self:sem create_sem_perms;
 allow cupsd_t self:appletalk_socket create_socket_perms;
 
-allow cupsd_t cupsd_etc_t:dir setattr_dir_perms;
-allow cupsd_t cupsd_etc_t:file setattr_file_perms;
+allow cupsd_t cupsd_etc_t:dir manage_dir_perms;
+allow cupsd_t cupsd_etc_t:file { map rename setattr_file_perms };
 read_files_pattern(cupsd_t, cupsd_etc_t, cupsd_etc_t)
 read_lnk_files_pattern(cupsd_t, cupsd_etc_t, cupsd_etc_t)
 
@@ -174,8 +175,10 @@ manage_lnk_files_pattern(cupsd_t, cupsd_var_lib_t, cupsd_var_lib_t)
 
 manage_dirs_pattern(cupsd_t, cupsd_tmp_t, cupsd_tmp_t)
 manage_files_pattern(cupsd_t, cupsd_tmp_t, cupsd_tmp_t)
+manage_lnk_files_pattern(cupsd_t, cupsd_tmp_t, cupsd_tmp_t)
 manage_fifo_files_pattern(cupsd_t, cupsd_tmp_t, cupsd_tmp_t)
-files_tmp_filetrans(cupsd_t, cupsd_tmp_t, { dir fifo_file file })
+files_tmp_filetrans(cupsd_t, cupsd_tmp_t, { dir fifo_file file lnk_file })
+allow cupsd_t cupsd_tmp_t:file execute;
 
 allow cupsd_t cupsd_var_run_t:dir setattr_dir_perms;
 manage_dirs_pattern(cupsd_t, cupsd_var_run_t, cupsd_var_run_t)
@@ -289,9 +292,15 @@ auth_use_nsswitch(cupsd_t)
 
 libs_exec_lib_files(cupsd_t)
 libs_exec_ldconfig(cupsd_t)
+libs_exec_ld_so(cupsd_t)
+libs_use_ld_so(cupsd_t)
+libs_legacy_use_ld_so(cupsd_t)
+libs_dontaudit_setattr_lib_dirs(cupsd_t)
 
 logging_send_audit_msgs(cupsd_t)
 logging_send_syslog_msg(cupsd_t)
+
+miscfiles_legacy_read_localization(cupsd_t)
 
 seutil_read_config(cupsd_t)
 
@@ -326,6 +335,10 @@ optional_policy(`
 
 	optional_policy(`
 		avahi_dbus_chat(cupsd_t)
+	')
+
+	optional_policy(`
+		colord_read_lib_files(cupsd_t)
 	')
 
 	optional_policy(`
@@ -367,6 +380,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+	networkmanager_dbus_chat(cupsd_t)
+')
+
+optional_policy(`
 	samba_read_config(cupsd_t)
 	samba_rw_var_files(cupsd_t)
 	samba_stream_connect_nmbd(cupsd_t)
@@ -377,7 +394,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	snmp_read_snmp_var_lib_files(cupsd_t)
+	snmp_manage_var_lib_files(cupsd_t)
 ')
 
 optional_policy(`
@@ -397,7 +414,7 @@ optional_policy(`
 # Configuration daemon local policy
 #
 
-allow cupsd_config_t self:capability { chown dac_override sys_tty_config };
+allow cupsd_config_t self:capability { chown dac_read_search sys_tty_config };
 dontaudit cupsd_config_t self:capability sys_tty_config;
 allow cupsd_config_t self:process { getsched };
 
@@ -421,9 +438,11 @@ manage_dirs_pattern(cupsd_config_t, cupsd_tmp_t, cupsd_tmp_t)
 files_tmp_filetrans(cupsd_config_t, cupsd_tmp_t, { lnk_file file dir })
 
 allow cupsd_config_t cupsd_var_run_t:file read_file_perms;
+allow cupsd_config_t cupsd_var_run_t:sock_file read_file_perms;
 
 manage_dirs_pattern(cupsd_config_t, cupsd_config_var_run_t, cupsd_config_var_run_t)
 manage_files_pattern(cupsd_config_t, cupsd_config_var_run_t, cupsd_config_var_run_t)
+manage_sock_files_pattern(cupsd_config_t, cupsd_config_var_run_t, cupsd_config_var_run_t)
 files_pid_filetrans(cupsd_config_t, cupsd_config_var_run_t, { dir file })
 
 read_files_pattern(cupsd_config_t, cupsd_etc_t, cupsd_etc_t)
@@ -467,6 +486,10 @@ userdom_read_all_users_state(cupsd_config_t)
 userdom_read_user_tmp_symlinks(cupsd_config_t)
 userdom_rw_user_tmp_files(cupsd_config_t)
 
+tunable_policy(`cups_execmem',`
+	allow cupsd_config_t self:process { execmem execstack };
+')
+
 optional_policy(`
 	term_use_generic_ptys(cupsd_config_t)
 ')
@@ -506,6 +529,10 @@ optional_policy(`
 
 optional_policy(`
 	lpd_read_config(cupsd_config_t)
+')
+
+optional_policy(`
+	libs_exec_ldconfig(cupsd_config_t)
 ')
 
 optional_policy(`
@@ -567,6 +594,8 @@ corenet_tcp_connect_printer_port(cupsd_lpd_t)
 dev_read_urand(cupsd_lpd_t)
 dev_read_rand(cupsd_lpd_t)
 
+init_abstract_socket_activation(cupsd_lpd_t)
+
 fs_getattr_xattr_fs(cupsd_lpd_t)
 
 files_search_home(cupsd_lpd_t)
@@ -584,12 +613,18 @@ optional_policy(`
 # Pdf local policy
 #
 
-allow cups_pdf_t self:capability { chown fowner fsetid setuid setgid dac_override };
+allow cups_pdf_t self:capability { chown fowner fsetid setuid setgid dac_read_search dac_override };
 allow cups_pdf_t self:unix_stream_socket create_stream_socket_perms;
+allow cups_pdf_t cupsd_rw_etc_t:dir search;
+
+
+allow cups_pdf_t cupsd_etc_t:dir list_dir_perms;
 
 append_files_pattern(cups_pdf_t, cupsd_log_t, cupsd_log_t)
 create_files_pattern(cups_pdf_t, cupsd_log_t, cupsd_log_t)
 setattr_files_pattern(cups_pdf_t, cupsd_log_t, cupsd_log_t)
+manage_dirs_pattern(cups_pdf_t, cupsd_log_t, cupsd_log_t)
+logging_log_filetrans(cups_pdf_t, cupsd_log_t, { file dir })
 
 manage_files_pattern(cups_pdf_t, cups_pdf_tmp_t, cups_pdf_tmp_t)
 manage_dirs_pattern(cups_pdf_t, cups_pdf_tmp_t, cups_pdf_tmp_t)
@@ -612,6 +647,10 @@ tunable_policy(`use_nfs_home_dirs',`
 ')
 
 userdom_home_manager(cups_pdf_t)
+
+optional_policy(`
+	dbus_system_bus_client(cups_pdf_t)
+')
 
 optional_policy(`
 	gnome_read_config(cups_pdf_t)

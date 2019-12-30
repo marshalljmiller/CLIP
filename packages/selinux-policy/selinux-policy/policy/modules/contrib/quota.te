@@ -28,7 +28,7 @@ files_pid_file(quota_nld_var_run_t)
 # Local policy
 #
 
-allow quota_t self:capability { sys_admin dac_override };
+allow quota_t self:capability { sys_admin dac_read_search  };
 dontaudit quota_t self:capability sys_tty_config;
 allow quota_t self:process signal_perms;
 
@@ -76,6 +76,7 @@ files_getattr_all_file_type_fs(quota_t)
 # Read /etc/mtab.
 files_read_etc_runtime_files(quota_t)
 
+init_domain(quota_t, quota_exec_t)
 init_use_fds(quota_t)
 init_use_script_ptys(quota_t)
 
@@ -106,6 +107,7 @@ optional_policy(`
 
 allow quota_nld_t self:fifo_file rw_fifo_file_perms;
 allow quota_nld_t self:netlink_socket create_socket_perms;
+allow quota_nld_t self:netlink_generic_socket create_socket_perms;
 allow quota_nld_t self:unix_stream_socket create_stream_socket_perms;
 
 manage_files_pattern(quota_nld_t, quota_nld_var_run_t, quota_nld_var_run_t)
@@ -123,6 +125,5 @@ userdom_use_user_terminals(quota_nld_t)
 
 optional_policy(`
     dbus_system_bus_client(quota_nld_t)
-# BMW removed for CLIP
-#    dbus_connect_system_bus(quota_nld_t)
+    dbus_connect_system_bus(quota_nld_t)
 ')

@@ -41,6 +41,8 @@ files_type(sandbox_devpts_t)
 #
 allow sandbox_xserver_t self:process { signal_perms execstack };
 
+allow sandbox_web_t sandbox_xserver_t:process2 nnp_transition;
+
 tunable_policy(`deny_execmem',`',`
 	allow sandbox_xserver_t self:process execmem;
 ')
@@ -105,6 +107,8 @@ logging_send_audit_msgs(sandbox_xserver_t)
 userdom_use_inherited_user_terminals(sandbox_xserver_t)
 userdom_dontaudit_search_user_home_content(sandbox_xserver_t)
 userdom_dontaudit_rw_user_tmp_pipes(sandbox_xserver_t)
+userdom_map_tmp_files(sandbox_xserver_t)
+userdom_rw_user_tmp_files(sandbox_xserver_t)
 
 xserver_read_xkb_libs(sandbox_xserver_t)
 xserver_dontaudit_xkb_libs_access(sandbox_xserver_t)
@@ -117,6 +121,22 @@ optional_policy(`
 		hal_dbus_chat(sandbox_xserver_t)
 	')
 ')
+
+########################################
+#
+# sandbox_x_t local policy
+#
+
+allow sandbox_x_t sandbox_x_client_t:process2 nnp_transition;
+allow sandbox_x_t sandbox_xserver_t:process2 nnp_transition;
+
+files_search_home(sandbox_x_t)
+userdom_use_user_ptys(sandbox_x_t)
+
+# This access is needed due to Wayland
+userdom_manage_user_tmp_dirs(sandbox_x_t)
+userdom_map_tmp_files(sandbox_x_t)
+userdom_manage_user_tmp_files(sandbox_x_t)
 
 ########################################
 #
@@ -169,9 +189,11 @@ dev_dontaudit_rw_dri(sandbox_x_domain)
 
 files_search_home(sandbox_x_domain)
 files_dontaudit_list_all_mountpoints(sandbox_x_domain)
-files_entrypoint_all_files(sandbox_x_domain)
 files_read_config_files(sandbox_x_domain)
 files_read_usr_symlinks(sandbox_x_domain)
+
+corecmd_entrypoint_all_executables(sandbox_x_domain)
+files_entrypoint_all_mountpoint(sandbox_x_domain)
 
 fs_getattr_tmpfs(sandbox_x_domain)
 fs_getattr_xattr_fs(sandbox_x_domain)
@@ -183,10 +205,14 @@ auth_dontaudit_read_login_records(sandbox_x_domain)
 auth_dontaudit_write_login_records(sandbox_x_domain)
 auth_search_pam_console_data(sandbox_x_domain)
 
+automount_exec_config(sandbox_x_domain)
+
 init_read_utmp(sandbox_x_domain)
 init_dontaudit_write_utmp(sandbox_x_domain)
 
 libs_dontaudit_setattr_lib_files(sandbox_x_domain)
+libs_dontaudit_setattr_lib_dirs(sandbox_x_domain)
+libs_exec_lib_files(sandbox_x_domain)
 
 miscfiles_dontaudit_setattr_fonts_cache_dirs(sandbox_x_domain)
 
@@ -214,6 +240,10 @@ storage_dontaudit_rw_fuse(sandbox_x_domain)
 
 optional_policy(`
 	bluetooth_dbus_chat(sandbox_x_domain)
+')
+
+optional_policy(`
+	colord_dbus_chat(sandbox_x_domain)
 ')
 
 optional_policy(`
@@ -288,8 +318,10 @@ optional_policy(`
 	networkmanager_dontaudit_dbus_chat(sandbox_x_domain)
 ')
 
-files_search_home(sandbox_x_t)
-userdom_use_user_ptys(sandbox_x_t)
+#1103622
+corenet_tcp_connect_xserver_port(sandbox_x_domain)
+xserver_stream_connect(sandbox_x_domain)
+userdom_connectto_stream(sandbox_x_domain)
 
 ########################################
 #
@@ -307,6 +339,11 @@ corenet_dontaudit_tcp_connect_xserver_port(sandbox_x_client_t)
 auth_use_nsswitch(sandbox_x_client_t)
 
 logging_send_syslog_msg(sandbox_x_client_t)
+
+# This access is needed due to Wayland
+userdom_manage_user_tmp_dirs(sandbox_x_client_t)
+userdom_map_tmp_files(sandbox_x_client_t)
+userdom_manage_user_tmp_files(sandbox_x_client_t)
 
 optional_policy(`
 	avahi_dbus_chat(sandbox_x_client_t)
@@ -330,13 +367,18 @@ optional_policy(`
 #
 typeattribute sandbox_web_client_t sandbox_web_type;
 
+allow sandbox_web_t sandbox_web_client_t:process2 nnp_transition;
+
 selinux_get_fs_mount(sandbox_web_client_t)
 
 auth_use_nsswitch(sandbox_web_client_t)
 
 logging_send_syslog_msg(sandbox_web_client_t)
 
+miscfiles_map_generic_certs(sandbox_web_client_t)
+
 allow sandbox_web_type self:capability { setuid setgid };
+allow sandbox_web_type self:cap_userns { sys_admin };
 allow sandbox_web_type self:netlink_audit_socket nlmsg_relay;
 dontaudit sandbox_web_type self:process setrlimit;
 
@@ -418,6 +460,7 @@ seutil_read_default_contexts(sandbox_web_type)
 
 userdom_rw_user_tmp_files(sandbox_web_type)
 userdom_delete_user_tmp_files(sandbox_web_type)
+userdom_dontaudit_manage_user_tmp_dirs(sandbox_web_type)
 
 optional_policy(`
 	alsa_read_rw_config(sandbox_web_type)

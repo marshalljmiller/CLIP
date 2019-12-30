@@ -40,6 +40,8 @@ systemd_dontaudit_dbus_chat(xguest_t)
 # Local policy
 #
 
+dontaudit xguest_t xguest_t : tcp_socket { listen };
+
 ifndef(`enable_mls',`
 	fs_exec_noxattr(xguest_t)
 
@@ -61,6 +63,9 @@ optional_policy(`
 
 kernel_dontaudit_request_load_module(xguest_t)
 kernel_read_software_raid_state(xguest_t)
+
+#GDM runs the X server as the unprivileged user.
+dev_rw_input_dev(xguest_t)
 
 tunable_policy(`selinuxuser_execstack',`
 	allow xguest_t self:process execstack;
@@ -88,7 +93,8 @@ optional_policy(`
 optional_policy(`
 	tunable_policy(`xguest_use_bluetooth',`
 		bluetooth_dbus_chat(xguest_t)
-	')
+        allow xguest_t self:bluetooth_socket create_stream_socket_perms;
+    ')
 ')
 
 optional_policy(`
@@ -116,6 +122,10 @@ optional_policy(`
 
 optional_policy(`
 	dbus_dontaudit_chat_system_bus(xguest_t)
+')
+
+optional_policy(`
+	gnome_filetrans_fontconfig_home_content(xguest_t)
 ')
 
 optional_policy(`

@@ -237,6 +237,7 @@ interface(`networkmanager_manage_lib_files',`
 
 	files_search_var_lib($1)
 	manage_files_pattern($1, NetworkManager_var_lib_t, NetworkManager_var_lib_t)
+	allow $1 NetworkManager_var_lib_t:file map;
 ')
 
 ########################################
@@ -257,6 +258,7 @@ interface(`networkmanager_read_lib_files',`
 	files_search_var_lib($1)
 	list_dirs_pattern($1, NetworkManager_var_lib_t, NetworkManager_var_lib_t)
 	read_files_pattern($1, NetworkManager_var_lib_t, NetworkManager_var_lib_t)
+	allow $1 NetworkManager_var_lib_t:file map;
 ')
 
 #######################################
@@ -272,10 +274,12 @@ interface(`networkmanager_read_lib_files',`
 interface(`networkmanager_read_conf',`
     gen_require(`
         type NetworkManager_etc_t;
+        type NetworkManager_etc_rw_t;
     ')
 
 	allow $1 NetworkManager_etc_t:dir list_dir_perms;
 	read_files_pattern($1,NetworkManager_etc_t,NetworkManager_etc_t)
+	read_files_pattern($1,NetworkManager_etc_rw_t,NetworkManager_etc_rw_t)
 ')
 
 ########################################
@@ -313,6 +317,7 @@ interface(`networkmanager_manage_pid_files',`
 	')
 
 	files_search_pids($1)
+	manage_dirs_pattern($1, NetworkManager_var_run_t, NetworkManager_var_run_t)
 	manage_files_pattern($1, NetworkManager_var_run_t, NetworkManager_var_run_t)
 ')
 
@@ -333,6 +338,40 @@ interface(`networkmanager_manage_pid_sock_files',`
 
 	files_search_pids($1)
 	manage_sock_files_pattern($1, NetworkManager_var_run_t, NetworkManager_var_run_t)
+')
+
+########################################
+## <summary>
+##	Create objects in /etc with a private
+##	type using a type_transition.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <param name="file_type">
+##	<summary>
+##	Private file type.
+##	</summary>
+## </param>
+## <param name="class">
+##	<summary>
+##	Object classes to be created.
+##	</summary>
+## </param>
+## <param name="name" optional="true">
+##	<summary>
+##	The name of the object being created.
+##	</summary>
+## </param>
+#
+interface(`networkmanager_pid_filetrans',`
+	gen_require(`
+		type NetworkManager_var_run_t;
+	')
+
+	filetrans_pattern($1, NetworkManager_var_run_t, $2, $3, $4)
 ')
 
 ####################################
@@ -419,6 +458,8 @@ interface(`networkmanager_append_log',`
 	logging_search_logs($1)
 	allow $1 NetworkManager_log_t:dir list_dir_perms;
 	append_files_pattern($1, NetworkManager_log_t, NetworkManager_log_t)
+	allow $1 NetworkManager_log_t:file map;
+
 ')
 
 #######################################
@@ -438,6 +479,8 @@ interface(`networkmanager_manage_lib',`
     ')
 
     manage_files_pattern($1, NetworkManager_var_lib_t, NetworkManager_var_lib_t)
+    allow $1 NetworkManager_var_lib_t:file map;
+
 ')
 
 #######################################
@@ -481,6 +524,63 @@ interface(`networkmanager_dgram_send',`
 
 ########################################
 ## <summary>
+##	Send sigchld to networkmanager.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+#
+interface(`networkmanager_sigchld',`
+	gen_require(`
+		type NetworkManager_t;
+	')
+
+    allow $1 NetworkManager_t:process sigchld;
+')
+
+########################################
+## <summary>
+##	Send signull to networkmanager.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+#
+interface(`networkmanager_signull',`
+	gen_require(`
+		type NetworkManager_t;
+	')
+
+    allow $1 NetworkManager_t:process signull;
+')
+
+########################################
+## <summary>
+##	Send sigkill to networkmanager.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+#
+interface(`networkmanager_sigkill',`
+	gen_require(`
+		type NetworkManager_t;
+	')
+
+    allow $1 NetworkManager_t:process sigkill;
+')
+
+########################################
+## <summary>
 ##	Transition to networkmanager named content
 ## </summary>
 ## <param name="domain">
@@ -495,16 +595,16 @@ interface(`networkmanager_filetrans_named_content',`
 		type NetworkManager_var_lib_t;
 	')
 
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth0.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth1.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth2.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth3.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth4.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth5.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth6.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth7.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth8.conf")
-	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient.-eth9.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth0.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth1.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth2.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth3.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth4.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth5.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth6.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth7.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth8.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-eth9.conf")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em0.conf")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em1.conf")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em2.conf")
@@ -514,6 +614,7 @@ interface(`networkmanager_filetrans_named_content',`
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em6.conf")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em7.conf")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "nm-dhclient-em8.conf")
+	files_pid_filetrans($1, NetworkManager_var_run_t, dir, "teamd")
 	files_pid_filetrans($1, NetworkManager_var_run_t, file, "wicd.pid")
 	files_etc_filetrans($1, NetworkManager_var_lib_t, file, "manager-settings.conf")
 	files_etc_filetrans($1, NetworkManager_var_lib_t, file, "wireless-settings.conf")

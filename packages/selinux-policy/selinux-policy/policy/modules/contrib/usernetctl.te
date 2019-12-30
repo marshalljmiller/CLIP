@@ -18,7 +18,7 @@ domain_interactive_fd(usernetctl_t)
 # Local policy
 #
 
-allow usernetctl_t self:capability { setuid setgid dac_override };
+allow usernetctl_t self:capability { setuid setgid dac_read_search  };
 allow usernetctl_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 allow usernetctl_t self:fd use;
 allow usernetctl_t self:fifo_file rw_fifo_file_perms;
@@ -65,7 +65,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_run_insmod(usernetctl_t, usernetctl_roles)
+	modutils_run_kmod(usernetctl_t, usernetctl_roles)
 ')
 
 optional_policy(`

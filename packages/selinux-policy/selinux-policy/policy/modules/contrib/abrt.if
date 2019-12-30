@@ -1,5 +1,21 @@
 ## <summary>ABRT - automated bug-reporting tool</summary>
 
+########################################
+## <summary>
+##	abrt stub interface.  No access allowed.
+## </summary>
+## <param name="domain" unused="true">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`abrt_stub',`
+	gen_require(`
+		type abrt_t;
+	')
+')
+
 ######################################
 ## <summary>
 ##  Creates types and rules for a basic
@@ -39,7 +55,6 @@ interface(`abrt_domtrans',`
 
 	corecmd_search_bin($1)
 	domtrans_pattern($1, abrt_exec_t, abrt_t)
-    allow $1 abrt_exec_t:file map;
 ')
 
 ######################################
@@ -78,7 +93,6 @@ interface(`abrt_exec',`
 
 	corecmd_search_bin($1)
 	can_exec($1, abrt_exec_t)
-    allow $1 abrt_exec_t:file map;
 ')
 
 ########################################
@@ -277,6 +291,25 @@ interface(`abrt_manage_cache',`
 	manage_files_pattern($1, abrt_var_cache_t, abrt_var_cache_t)
 	manage_lnk_files_pattern($1, abrt_var_cache_t, abrt_var_cache_t)
 	manage_dirs_pattern($1, abrt_var_cache_t, abrt_var_cache_t)
+')
+
+########################################
+## <summary>
+##	Map abrt cache
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`abrt_map_cache',`
+	gen_require(`
+		type abrt_var_cache_t;
+	')
+
+allow $1 abrt_var_cache_t:file map;
+
 ')
 
 ####################################

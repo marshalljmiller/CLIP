@@ -43,7 +43,7 @@ systemd_unit_file(apmd_unit_file_t)
 # Client local policy
 #
 
-allow apm_t self:capability { dac_override sys_admin };
+allow apm_t self:capability { dac_read_search  sys_admin sys_resource };
 
 kernel_read_system_state(apm_t)
 
@@ -62,11 +62,12 @@ logging_send_syslog_msg(apm_t)
 # Server local policy
 #
 
-allow apmd_t self:capability { sys_admin sys_nice sys_time kill mknod };
-dontaudit apmd_t self:capability { setuid dac_override dac_read_search sys_tty_config };
+allow apmd_t self:capability { sys_admin sys_nice sys_time kill mknod sys_resource };
+dontaudit apmd_t self:capability { setuid  dac_read_search sys_tty_config };
 allow apmd_t self:process { signal_perms getsession };
 allow apmd_t self:fifo_file rw_fifo_file_perms;
 allow apmd_t self:netlink_socket create_socket_perms;
+allow apmd_t self:netlink_generic_socket create_socket_perms;
 allow apmd_t self:unix_stream_socket { accept listen };
 
 allow apmd_t apmd_lock_t:file manage_file_perms;
@@ -134,6 +135,7 @@ auth_use_nsswitch(apmd_t)
 init_domtrans_script(apmd_t)
 init_read_utmp(apmd_t)
 init_telinit(apmd_t)
+init_dbus_chat(apmd_t)
 
 libs_exec_ld_so(apmd_t)
 libs_exec_lib_files(apmd_t)
@@ -143,7 +145,7 @@ logging_send_syslog_msg(apmd_t)
 
 miscfiles_read_hwdata(apmd_t)
 
-modutils_domtrans_insmod(apmd_t)
+modutils_domtrans_kmod(apmd_t)
 modutils_read_module_config(apmd_t)
 
 seutil_sigchld_newrole(apmd_t)
@@ -219,6 +221,11 @@ optional_policy(`
 
 optional_policy(`
 	systemd_dbus_chat_logind(apmd_t)
+')
+
+optional_policy(`
+	systemd_start_power_services(apmd_t)
+	systemd_status_power_services(apmd_t)
 ')
 
 optional_policy(`

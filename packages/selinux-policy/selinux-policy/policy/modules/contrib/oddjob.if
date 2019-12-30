@@ -148,6 +148,31 @@ interface(`oddjob_run_mkhomedir',`
 	role $2 types oddjob_mkhomedir_t;
 ')
 
+########################################
+## <summary>
+##	Execute the oddjob program in the oddjob domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`oddjob_run',`
+	gen_require(`
+		type oddjob_t;
+	')
+
+	oddjob_domtrans($1)
+	role $2 types oddjob_t;
+')
+
 #######################################
 ## <summary>
 ##  Execute oddjob in the oddjob domain.
@@ -208,4 +233,22 @@ interface(`oddjob_ranged_domain',`
 		range_transition oddjob_t $2:process $3;
 		mls_rangetrans_target($1)
 	')
+')
+
+########################################
+## <summary>
+##	Allow any oddjob_mkhomedir_exec_t to be an entrypoint of this domain
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`oddjob_mkhomedir_entrypoint',`
+	gen_require(`
+		type oddjob_mkhomedir_exec_t;
+	')
+	allow $1 oddjob_mkhomedir_exec_t:file entrypoint;
 ')

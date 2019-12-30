@@ -5,17 +5,42 @@ policy_module(tmpreaper, 1.7.1)
 # Declarations
 #
 
+## <desc>
+##	<p>
+##	Determine whether tmpreaper can use
+##	nfs file systems.
+##	</p>
+## </desc>
+gen_tunable(tmpreaper_use_nfs, false)
+
+
+## <desc>
+##	<p>
+##	Determine whether tmpreaper can use
+##	cifs file systems.
+##	</p>
+## </desc>
+gen_tunable(tmpreaper_use_cifs, false)
+
+## <desc>
+## <p>
+## Determine whether tmpreaper can use samba_share files
+## </p>
+## </desc>
+gen_tunable(tmpreaper_use_samba, false)
+
 type tmpreaper_t;
 type tmpreaper_exec_t;
 init_system_domain(tmpreaper_t, tmpreaper_exec_t)
 application_domain(tmpreaper_t, tmpreaper_exec_t)
+init_nnp_daemon_domain(tmpreaper_t)
 
 ########################################
 #
 # Local Policy
 #
 
-allow tmpreaper_t self:capability { dac_override dac_read_search fowner };
+allow tmpreaper_t self:capability {  dac_read_search fowner };
 allow tmpreaper_t self:fifo_file rw_fifo_file_perms;
 
 kernel_list_unlabeled(tmpreaper_t)
@@ -35,10 +60,7 @@ fs_delete_tmpfs_files(tmpreaper_t)
 files_read_var_lib_files(tmpreaper_t)
 files_purge_tmp(tmpreaper_t)
 files_delete_all_non_security_files(tmpreaper_t)
-# why does it need setattr?
-files_setattr_all_tmp_dirs(tmpreaper_t)
-files_setattr_isid_type_dirs(tmpreaper_t)
-files_setattr_usr_dirs(tmpreaper_t)
+files_setattr_non_security_dirs(tmpreaper_t)
 files_getattr_all_dirs(tmpreaper_t)
 files_getattr_all_files(tmpreaper_t)
 
@@ -65,6 +87,26 @@ ifdef(`distro_redhat',`
 	userdom_delete_all_user_home_content_sock_files(tmpreaper_t)
 	userdom_delete_all_user_home_content_symlinks(tmpreaper_t)
 	userdom_setattr_all_user_home_content_dirs(tmpreaper_t)
+')
+
+tunable_policy(`tmpreaper_use_nfs',`
+	fs_setattr_nfs_dirs(tmpreaper_t)
+')
+
+	optional_policy(`
+        tunable_policy(`tmpreaper_use_samba',`
+            samba_setattr_samba_share_dirs(tmpreaper_t)
+    ')
+')
+
+tunable_policy(`tmpreaper_use_cifs',`
+	fs_setattr_cifs_dirs(tmpreaper_t)
+')
+
+	optional_policy(`
+        tunable_policy(`tmpreaper_use_samba',`
+            samba_setattr_samba_share_dirs(tmpreaper_t)
+    ')
 ')
 
 optional_policy(`
@@ -110,3 +152,8 @@ optional_policy(`
 optional_policy(`
 	rpm_manage_cache(tmpreaper_t)
 ')
+
+optional_policy(`
+        ntp_manage_log(tmpreaper_t)
+')
+

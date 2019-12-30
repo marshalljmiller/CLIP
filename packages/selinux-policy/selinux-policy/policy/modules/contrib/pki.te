@@ -15,7 +15,7 @@ attribute pki_apache_pidfiles;
 attribute pki_apache_script;
 
 type pki_log_t;
-files_type(pki_log_t)
+logging_log_file(pki_log_t)
 
 type pki_common_t;
 files_type(pki_common_t)
@@ -72,7 +72,7 @@ optional_policy(`
 # pki-tomcat local policy
 #
 
-allow pki_tomcat_t self:capability { setuid chown setgid fowner audit_write dac_override sys_nice fsetid };
+allow pki_tomcat_t self:capability { setuid chown setgid fowner audit_write dac_read_search  sys_nice fsetid };
 dontaudit  pki_tomcat_t self:capability net_admin;
 allow pki_tomcat_t self:process { signal setsched signull execmem setfscreate };
 
@@ -110,6 +110,8 @@ manage_files_pattern(pki_tomcat_t, pki_common_t, pki_common_t)
 can_exec(pki_tomcat_t, pki_common_t)
 init_stream_connect_script(pki_tomcat_t)
 
+auth_use_nsswitch(pki_tomcat_t)
+
 search_dirs_pattern(pki_tomcat_t, pki_log_t, pki_log_t)
 
 kernel_read_kernel_sysctls(pki_tomcat_t)
@@ -121,6 +123,8 @@ corenet_tcp_connect_smtp_port(pki_tomcat_t)
 corenet_tcp_connect_pki_ca_port(pki_tomcat_t)
 
 selinux_get_enforce_mode(pki_tomcat_t)
+
+libs_exec_ldconfig(pki_tomcat_t)
 
 logging_send_audit_msgs(pki_tomcat_t)
 
@@ -203,7 +207,7 @@ optional_policy(`
 #
 
 
-allow pki_apache_domain self:capability { setuid sys_nice setgid dac_override fowner fsetid kill chown};
+allow pki_apache_domain self:capability { setuid sys_nice setgid dac_read_search  fowner fsetid kill chown};
 allow pki_apache_domain self:process { setsched signal getsched  signull execstack execmem sigkill};
 
 allow pki_apache_domain self:sem all_sem_perms;

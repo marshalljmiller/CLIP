@@ -18,7 +18,7 @@ role sambagui_roles types sambagui_t;
 # Local policy
 #
 
-allow sambagui_t self:capability dac_override;
+allow sambagui_t self:capability { dac_read_search  };
 allow sambagui_t self:fifo_file rw_fifo_file_perms;
 
 kernel_read_system_state(sambagui_t)
@@ -59,6 +59,7 @@ optional_policy(`
 	samba_append_log(sambagui_t)
 	samba_manage_config(sambagui_t)
 	samba_manage_var_files(sambagui_t)
+	samba_manage_var_dirs(sambagui_t)
 	samba_read_secrets(sambagui_t)
 	samba_initrc_domtrans(sambagui_t)
 	samba_systemctl(sambagui_t)

@@ -173,6 +173,7 @@ interface(`sssd_read_public_files',`
 	sssd_search_lib($1)
 	list_dirs_pattern($1, sssd_public_t, sssd_public_t)
 	read_files_pattern($1, sssd_public_t, sssd_public_t)
+    allow $1 sssd_public_t:file map;
 ')
 
 ########################################
@@ -364,6 +365,7 @@ interface(`sssd_manage_lib_files',`
 	files_search_var_lib($1)
 	manage_files_pattern($1, sssd_var_lib_t, sssd_var_lib_t)
 	manage_lnk_files_pattern($1, sssd_var_lib_t, sssd_var_lib_t)
+    allow $1 sssd_var_lib_t:file map;
 ')
 
 ########################################
@@ -425,6 +427,44 @@ interface(`sssd_dontaudit_stream_connect',`
 	dontaudit $1 sssd_var_lib_t:sock_file { read write };
 ')
 
+########################################
+## <summary>
+##	Connect to sssd over a unix stream socket in /var/run.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`sssd_run_stream_connect',`
+	gen_require(`
+		type sssd_t, sssd_var_run_t;
+	')
+
+	files_search_pids($1)
+	stream_connect_pattern($1, sssd_var_run_t, sssd_var_run_t, sssd_t)
+')
+
+########################################
+## <summary>
+##	Dontaudit attempts to connect to sssd over a unix stream socket in /var/run.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`sssd_dontaudit_run_stream_connect',`
+	gen_require(`
+		type sssd_t, sssd_var_lib_t;
+	')
+
+	dontaudit $1 sssd_t:unix_stream_socket connectto;
+	dontaudit $1 sssd_var_run_t:sock_file { read write };
+')
+
 #######################################
 ## <summary>
 ##     Manage keys for all user domains.
@@ -461,6 +501,52 @@ interface(`sssd_rw_inherited_pipes',`
     ')
 
     allow $1 sssd_t:fifo_file rw_inherited_fifo_file_perms;
+')
+
+########################################
+## <summary>
+##  Allow caller to signal sssd.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`sssd_signal',`
+	gen_require(`
+		type sssd_t;
+	')
+
+	allow $1 sssd_t:process signal;
+')
+
+########################################
+## <summary>
+##	Transition to sssd named content
+## </summary>
+## <param name="domain">
+##	<summary>
+##      Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`sssd_filetrans_named_content',`
+	gen_require(`
+		type sssd_var_run_t;
+		type sssd_var_log_t;
+		type sssd_var_lib_t;
+		type sssd_public_t;
+		type sssd_conf_t;
+	')
+
+	files_pid_filetrans($1, sssd_var_run_t, sock_file, "secrets.socket")
+	files_pid_filetrans($1, sssd_var_run_t, sock_file, ".heim_org.h5l.kcm-socket")
+	logging_log_filetrans($1, sssd_var_log_t, dir, "sssd")
+	files_var_lib_filetrans($1, sssd_var_lib_t, dir, "sss")
+	filetrans_pattern($1, sssd_var_lib_t, sssd_public_t, dir, "mc")
+	filetrans_pattern($1, sssd_var_lib_t, sssd_public_t, dir, "pubconf")
+	files_etc_filetrans($1, sssd_conf_t, dir, "sssd")
 ')
 
 ########################################

@@ -22,19 +22,26 @@ type mdadm_unit_file_t;
 systemd_unit_file(mdadm_unit_file_t)
 
 type mdadm_tmp_t;
-files_tmpfs_file(mdadm_tmp_t)
+files_tmp_file(mdadm_tmp_t)
+
+type mdadm_tmpfs_t;
+files_tmpfs_file(mdadm_tmpfs_t)
 
 type mdadm_var_run_t alias mdadm_map_t;
 files_pid_file(mdadm_var_run_t)
 dev_associate(mdadm_var_run_t)
+
+type mdadm_log_t;
+logging_log_file(mdadm_log_t)
 
 ########################################
 #
 # Local policy
 #
 
-allow mdadm_t self:capability { dac_override sys_admin ipc_lock };
+allow mdadm_t self:capability { dac_read_search dac_override sys_admin ipc_lock };
 dontaudit mdadm_t self:capability { sys_tty_config sys_ptrace };
+dontaudit mdadm_t self:cap_userns { sys_ptrace };
 allow mdadm_t self:process { getsched setsched sigchld sigkill sigstop signull signal };
 allow mdadm_t self:fifo_file rw_fifo_file_perms;
 allow mdadm_t self:netlink_kobject_uevent_socket create_socket_perms;
@@ -42,10 +49,15 @@ allow mdadm_t self:unix_stream_socket { create_stream_socket_perms connectto };
 
 manage_files_pattern(mdadm_t, mdadm_conf_t, mdadm_conf_t)
 files_etc_filetrans(mdadm_t, mdadm_conf_t, file, "mdadm.conf")
+files_etc_filetrans(mdadm_t, mdadm_conf_t, file, "mdadm.conf.anacbak")
 
 manage_files_pattern(mdadm_t, mdadm_tmp_t, mdadm_tmp_t)
 manage_dirs_pattern(mdadm_t, mdadm_tmp_t, mdadm_tmp_t)
 files_tmp_filetrans(mdadm_t, mdadm_tmp_t, file)
+
+manage_files_pattern(mdadm_t, mdadm_tmpfs_t, mdadm_tmpfs_t)
+manage_dirs_pattern(mdadm_t, mdadm_tmpfs_t, mdadm_tmpfs_t)
+fs_tmpfs_filetrans(mdadm_t, mdadm_tmpfs_t, { dir file })
 
 manage_dirs_pattern(mdadm_t, mdadm_var_run_t, mdadm_var_run_t)
 manage_files_pattern(mdadm_t, mdadm_var_run_t, mdadm_var_run_t)
@@ -53,6 +65,9 @@ manage_lnk_files_pattern(mdadm_t, mdadm_var_run_t, mdadm_var_run_t)
 manage_sock_files_pattern(mdadm_t, mdadm_var_run_t, mdadm_var_run_t)
 files_pid_filetrans(mdadm_t, mdadm_var_run_t, { file dir })
 dev_filetrans(mdadm_t, mdadm_var_run_t, { file dir sock_file })
+
+manage_files_pattern(mdadm_t, mdadm_log_t, mdadm_log_t)
+logging_log_filetrans(mdadm_t, mdadm_log_t, file)
 
 can_exec(mdadm_t, mdadm_exec_t)
 
@@ -72,6 +87,7 @@ corecmd_exec_shell(mdadm_t)
 dev_rw_sysfs(mdadm_t)
 dev_dontaudit_read_all_blk_files(mdadm_t)
 dev_dontaudit_read_all_chr_files(mdadm_t)
+dev_getattr_all(mdadm_t)
 dev_read_crash(mdadm_t)
 dev_read_framebuffer(mdadm_t)
 dev_read_realtime_clock(mdadm_t)
@@ -82,6 +98,8 @@ dev_read_nvram(mdadm_t)
 dev_read_generic_files(mdadm_t)
 dev_read_generic_usb_dev(mdadm_t)
 dev_read_urand(mdadm_t)
+dev_read_rand(mdadm_t)
+dev_rw_nvme(mdadm_t)
 
 domain_read_all_domains_state(mdadm_t)
 domain_use_interactive_fds(mdadm_t)
@@ -95,6 +113,8 @@ fs_list_hugetlbfs(mdadm_t)
 fs_rw_cgroup_files(mdadm_t)
 fs_dontaudit_list_tmpfs(mdadm_t)
 fs_manage_cgroup_files(mdadm_t)
+fs_read_efivarfs_files(mdadm_t)
+fs_read_tmpfs_files(mdadm_t)
 
 mls_file_read_all_levels(mdadm_t)
 mls_file_write_all_levels(mdadm_t)
@@ -104,6 +124,7 @@ storage_manage_fixed_disk(mdadm_t)
 storage_read_scsi_generic(mdadm_t)
 storage_write_scsi_generic(mdadm_t)
 storage_raw_read_removable_device(mdadm_t)
+storage_tmp_filetrans_fixed_disk(mdadm_t)
 
 term_dontaudit_list_ptys(mdadm_t)
 term_dontaudit_use_unallocated_ttys(mdadm_t)
@@ -111,12 +132,16 @@ term_dontaudit_use_unallocated_ttys(mdadm_t)
 auth_use_nsswitch(mdadm_t)
 
 init_dontaudit_getattr_initctl(mdadm_t)
+init_getattr_script_status_files(mdadm_t)
 
 logging_dontaudit_getattr_all_logs(mdadm_t)
 logging_send_syslog_msg(mdadm_t)
 
 systemd_exec_systemctl(mdadm_t)
 systemd_start_systemd_services(mdadm_t)
+
+term_use_generic_ptys(mdadm_t)
+term_use_unallocated_ttys(mdadm_t)
 
 userdom_dontaudit_use_unpriv_user_fds(mdadm_t)
 userdom_dontaudit_search_user_home_content(mdadm_t)

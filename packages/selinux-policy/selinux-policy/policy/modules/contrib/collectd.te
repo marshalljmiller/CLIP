@@ -20,6 +20,9 @@ init_daemon_domain(collectd_t, collectd_exec_t)
 type collectd_initrc_exec_t;
 init_script_file(collectd_initrc_exec_t)
 
+type collectd_log_t;
+logging_log_file(collectd_log_t)
+
 type collectd_var_lib_t;
 files_type(collectd_var_lib_t)
 
@@ -40,22 +43,28 @@ files_tmp_file(collectd_script_tmp_t)
 # Local policy
 #
 
-allow collectd_t self:capability { ipc_lock net_admin sys_nice sys_ptrace dac_override };
+allow collectd_t self:capability { ipc_lock net_raw net_admin sys_nice sys_ptrace dac_read_search  setuid setgid };
 allow collectd_t self:process { getsched setsched signal };
 allow collectd_t self:fifo_file rw_fifo_file_perms;
 allow collectd_t self:packet_socket create_socket_perms;
-allow collectd_t self:unix_stream_socket { accept listen };
+allow collectd_t self:rawip_socket create_socket_perms;
+allow collectd_t self:unix_stream_socket { accept listen connectto };
 allow collectd_t self:netlink_tcpdiag_socket create_netlink_socket_perms;
 allow collectd_t self:udp_socket create_socket_perms;
 allow collectd_t self:rawip_socket create_socket_perms;
 
+manage_files_pattern(collectd_t, collectd_log_t, collectd_log_t)
+logging_log_filetrans(collectd_t, collectd_log_t, file)
+
 manage_dirs_pattern(collectd_t, collectd_var_lib_t, collectd_var_lib_t)
 manage_files_pattern(collectd_t, collectd_var_lib_t, collectd_var_lib_t)
 files_var_lib_filetrans(collectd_t, collectd_var_lib_t, dir)
+allow collectd_t collectd_var_lib_t:file map;
 
 manage_files_pattern(collectd_t, collectd_var_run_t, collectd_var_run_t)
+manage_dirs_pattern(collectd_t, collectd_var_run_t, collectd_var_run_t)
 manage_sock_files_pattern(collectd_t, collectd_var_run_t, collectd_var_run_t)
-files_pid_filetrans(collectd_t, collectd_var_run_t, { file sock_file })
+files_pid_filetrans(collectd_t, collectd_var_run_t, { dir file sock_file})
 
 kernel_read_all_sysctls(collectd_t)
 kernel_read_all_proc(collectd_t)
@@ -63,8 +72,12 @@ kernel_list_all_proc(collectd_t)
 
 auth_use_nsswitch(collectd_t)
 
+corecmd_exec_bin(collectd_t)
+
 corenet_udp_bind_generic_node(collectd_t)
 corenet_udp_bind_collectd_port(collectd_t)
+corenet_tcp_connect_lmtp_port(collectd_t)
+corenet_tcp_bind_bacula_port(collectd_t)
 
 dev_read_rand(collectd_t)
 dev_read_sysfs(collectd_t)
@@ -84,10 +97,22 @@ logging_send_syslog_msg(collectd_t)
 
 sysnet_dns_name_resolve(collectd_t)
 
+tunable_policy(`use_ecryptfs_home_dirs',`
+	fs_manage_ecryptfs_files(collectd_t)
+')
+
 tunable_policy(`collectd_tcp_network_connect',`
 	corenet_sendrecv_all_client_packets(collectd_t)
 	corenet_tcp_connect_all_ports(collectd_t)
 	corenet_tcp_sendrecv_all_ports(collectd_t)
+')
+
+optional_policy(`
+    lvm_read_config(collectd_t)
+')
+
+optional_policy(`
+	pdns_stream_connect(collectd_t)
 ')
 
 optional_policy(`
@@ -96,6 +121,14 @@ optional_policy(`
 
 optional_policy(`
     netutils_domtrans_ping(collectd_t)
+')
+
+optional_policy(`
+	postgresql_stream_connect(collectd_t)
+')
+
+optional_policy(`
+    snmp_read_snmp_var_lib_dirs(collectd_t)
 ')
 
 optional_policy(`

@@ -25,7 +25,7 @@ systemd_unit_file(nut_unit_file_t)
 # Local policy for upsd
 #
 
-allow nut_domain self:capability { setgid setuid dac_override };
+allow nut_domain self:capability { setgid setuid dac_read_search  };
 
 allow nut_domain self:process signal_perms;
 
@@ -61,6 +61,7 @@ corenet_tcp_bind_all_nodes(nut_upsd_t)
 # Local policy for upsmon
 #
 
+allow nut_upsmon_t self:capability kill;
 allow nut_upsmon_t self:tcp_socket create_socket_perms;
 allow nut_upsmon_t self:unix_dgram_socket { create_socket_perms sendto };
 allow nut_upsmon_t self:unix_stream_socket { create_socket_perms connectto };
@@ -75,6 +76,9 @@ corecmd_exec_shell(nut_upsmon_t)
 
 corenet_tcp_connect_ups_port(nut_upsmon_t)
 corenet_tcp_connect_generic_port(nut_upsmon_t)
+
+dev_read_rand(nut_upsmon_t)
+dev_read_urand(nut_upsmon_t)
 
 # Creates /etc/killpower
 files_manage_etc_runtime_files(nut_upsmon_t)
@@ -97,6 +101,11 @@ optional_policy(`
 	shutdown_domtrans(nut_upsmon_t)
 ')
 
+optional_policy(`
+	dbus_system_bus_client(nut_upsmon_t)
+	systemd_dbus_chat_logind(nut_upsmon_t)
+')
+
 ########################################
 #
 # Local policy for upsdrvctl
@@ -117,12 +126,15 @@ kernel_read_kernel_sysctls(nut_upsdrvctl_t)
 corecmd_exec_bin(nut_upsdrvctl_t)
 
 dev_read_sysfs(nut_upsdrvctl_t)
+dev_read_usbfs(nut_upsdrvctl_t)
 dev_rw_generic_usb_dev(nut_upsdrvctl_t)
 
 term_use_unallocated_ttys(nut_upsdrvctl_t)
 term_use_usb_ttys(nut_upsdrvctl_t)
 
 init_sigchld(nut_upsdrvctl_t)
+
+udev_read_db(nut_upsdrvctl_t)
 
 #######################################
 #

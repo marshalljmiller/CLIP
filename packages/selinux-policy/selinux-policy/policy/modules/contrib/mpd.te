@@ -73,7 +73,7 @@ files_pid_file(mpd_var_run_t)
 # Local policy
 #
 
-allow mpd_t self:capability { dac_override kill setgid setuid };
+allow mpd_t self:capability { dac_read_search dac_override kill setgid setuid };
 allow mpd_t self:process { getsched setsched setrlimit signal signull setcap };
 allow mpd_t self:fifo_file rw_fifo_file_perms;
 allow mpd_t self:unix_stream_socket { accept connectto listen };
@@ -99,7 +99,7 @@ manage_files_pattern(mpd_t, mpd_tmp_t, mpd_tmp_t)
 manage_sock_files_pattern(mpd_t, mpd_tmp_t, mpd_tmp_t)
 files_tmp_filetrans(mpd_t, mpd_tmp_t, { dir file sock_file })
 
-allow mpd_t mpd_tmpfs_t:file manage_file_perms;
+allow mpd_t mpd_tmpfs_t:file { manage_file_perms map };
 fs_tmpfs_filetrans(mpd_t, mpd_tmpfs_t, file)
 
 allow mpd_t mpd_user_data_t:dir list_dir_perms;
@@ -179,6 +179,12 @@ tunable_policy(`mpd_enable_homedirs',`
 optional_policy(`
 	tunable_policy(`mpd_enable_homedirs',`
 		pulseaudio_read_home_files(mpd_t)
+	')
+')
+
+optional_policy(`
+	tunable_policy(`mpd_enable_homedirs',`
+		gnome_list_home_config(mpd_t)
 	')
 ')
 

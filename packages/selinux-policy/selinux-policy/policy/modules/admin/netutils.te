@@ -34,7 +34,7 @@ init_system_domain(traceroute_t, traceroute_exec_t)
 
 # Perform network administration operations and have raw access to the network.
 allow netutils_t self:capability { chown dac_read_search net_admin net_raw setuid setgid sys_chroot  setpcap };
-dontaudit netutils_t self:capability { dac_override sys_tty_config };
+dontaudit netutils_t self:capability { sys_admin sys_tty_config };
 allow netutils_t self:process { setcap signal_perms };
 allow netutils_t self:netlink_route_socket create_netlink_socket_perms;
 allow netutils_t self:netlink_socket create_socket_perms;
@@ -43,9 +43,12 @@ allow netutils_t self:netlink_netfilter_socket create_socket_perms;
 allow netutils_t self:packet_socket { create_socket_perms map };
 allow netutils_t self:udp_socket create_socket_perms;
 allow netutils_t self:tcp_socket create_stream_socket_perms;
-allow netutils_t self:bluetooth_socket create_stream_socket_perms;
 allow netutils_t self:socket create_socket_perms;
 allow netutils_t self:netlink_socket create_socket_perms;
+
+tunable_policy(`deny_bluetooth',`',`
+    allow netutils_t self:bluetooth_socket create_stream_socket_perms;
+')
 
 manage_dirs_pattern(netutils_t, netutils_tmp_t, netutils_tmp_t)
 manage_files_pattern(netutils_t, netutils_tmp_t, netutils_tmp_t)
@@ -55,6 +58,7 @@ kernel_search_proc(netutils_t)
 kernel_read_all_sysctls(netutils_t)
 kernel_read_network_state(netutils_t)
 kernel_request_load_module(netutils_t)
+kernel_search_network_sysctl(traceroute_t)
 
 corenet_all_recvfrom_netlabel(netutils_t)
 corenet_tcp_sendrecv_generic_if(netutils_t)
@@ -96,7 +100,9 @@ term_dontaudit_use_console(netutils_t)
 userdom_use_inherited_user_terminals(netutils_t)
 userdom_use_all_users_fds(netutils_t)
 
-sysnet_read_config(netutils_t)
+optional_policy(`
+    kdump_dontaudit_inherited_kdumpctl_tmp_pipes(netutils_t)
+')
 
 optional_policy(`
 	nis_use_ypbind(netutils_t)
@@ -124,8 +130,6 @@ allow ping_t self:rawip_socket create_socket_perms;
 allow ping_t self:packet_socket create_socket_perms;
 allow ping_t self:netlink_route_socket create_netlink_socket_perms;
 allow ping_t self:icmp_socket create_socket_perms;
-# SRS: ping appears to probe for the source IP that packets will be routed through if -I isn't used on the command-line.
-allow ping_t self:udp_socket { connect getattr create setopt };
 
 corenet_all_recvfrom_netlabel(ping_t)
 corenet_tcp_sendrecv_generic_if(ping_t)
@@ -155,14 +159,13 @@ init_rw_inherited_script_tmp_files(ping_t)
 
 logging_send_syslog_msg(ping_t)
 
-sysnet_read_config(ping_t)
-
 ifdef(`hide_broken_symptoms',`
 	init_dontaudit_use_fds(ping_t)
 
 	optional_policy(`
 		nagios_dontaudit_rw_log(ping_t)
 		nagios_dontaudit_rw_pipes(ping_t)
+        nagios_dontaudit_write_pipes_nrpe(ping_t)
 	')
 ')
 
@@ -207,10 +210,12 @@ optional_policy(`
 #
 
 allow traceroute_t self:capability { net_admin net_raw setuid setgid };
+dontaudit traceroute_t self:capability { sys_admin };
 allow traceroute_t self:rawip_socket create_socket_perms;
 allow traceroute_t self:packet_socket { create_socket_perms map };
 allow traceroute_t self:udp_socket create_socket_perms;
 allow traceroute_t self:sctp_socket create_socket_perms;
+allow traceroute_t self:dccp_socket create_socket_perms;
 allow traceroute_t self:icmp_socket create_socket_perms;
 allow traceroute_t self:dccp_socket create_socket_perms;
 
@@ -237,6 +242,9 @@ corenet_udp_bind_traceroute_port(traceroute_t)
 corenet_tcp_connect_all_ports(traceroute_t)
 corenet_sendrecv_all_client_packets(traceroute_t)
 corenet_sendrecv_traceroute_server_packets(traceroute_t)
+corenet_sctp_bind_generic_node(traceroute_t)
+
+corecmd_exec_bin(traceroute_t)
 
 fs_dontaudit_getattr_xattr_fs(traceroute_t)
 
@@ -258,8 +266,6 @@ dev_read_rand(traceroute_t)
 dev_read_urand(traceroute_t)
 
 term_use_all_inherited_terms(traceroute_t)
-
-sysnet_read_config(traceroute_t)
 
 tunable_policy(`selinuxuser_ping',`
 	term_use_all_ttys(traceroute_t)

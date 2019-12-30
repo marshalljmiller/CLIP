@@ -77,7 +77,7 @@ interface(`domain_type',`
 	domain_base_type($1)
 
 	# Only way to get corenet_unlabeled packets disabled to work
-	#corenet_all_recvfrom_unlabeled($1)
+	corenet_all_recvfrom_unlabeled($1)
 ')
 
 ########################################
@@ -103,11 +103,15 @@ interface(`domain_entry_file',`
 	')
 
 	allow $1 $2:file entrypoint;
-        allow $1 $2:file { mmap_exec_file_perms ioctl lock };
+	allow $1 $2:file { mmap_exec_file_perms ioctl lock };
 
 	typeattribute $2 entry_type;
 
 	corecmd_executable_file($2)
+
+	#optional_policy(`
+	#	unconfined_exec_typebounds($2)
+	#')
 ')
 
 ########################################
@@ -600,6 +604,78 @@ interface(`domain_search_all_domains_state',`
 
 	kernel_search_proc($1)
 	allow $1 domain:dir search_dir_perms;
+')
+
+########################################
+## <summary>
+##	Allow read and write  of process kernel keyrings
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to dontaudit.
+##	</summary>
+## </param>
+#
+interface(`domain_rw_all_domains_keyrings',`
+	gen_require(`
+		attribute domain;
+	')
+
+	allow $1 domain:key { read write};
+')
+
+########################################
+## <summary>
+##	Allow manage of process kernel keyrings
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to dontaudit.
+##	</summary>
+## </param>
+#
+interface(`domain_manage_all_domains_keyrings',`
+	gen_require(`
+		attribute domain;
+	')
+
+	allow $1 domain:key manage_key_perms;
+')
+
+########################################
+## <summary>
+##	Dontaudit search of process kernel keyrings
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to dontaudit.
+##	</summary>
+## </param>
+#
+interface(`domain_dontaudit_search_all_domains_keyrings',`
+	gen_require(`
+		attribute domain;
+	')
+
+	dontaudit $1 domain:key search;
+')
+
+########################################
+## <summary>
+##	Dontaudit link of process kernel keyrings
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to dontaudit.
+##	</summary>
+## </param>
+#
+interface(`domain_dontaudit_link_all_domains_keyrings',`
+	gen_require(`
+		attribute domain;
+	')
+
+	dontaudit $1 domain:key link;
 ')
 
 ########################################
@@ -1422,7 +1498,7 @@ interface(`domain_mmap_all_entry_files',`
 		attribute entry_type;
 	')
 
-        allow $1 entry_type:file mmap_exec_file_perms;
+	allow $1 entry_type:file mmap_exec_file_perms;
 ')
 
 ########################################
@@ -1556,6 +1632,22 @@ interface(`domain_named_filetrans',`
 	typeattribute $1 named_filetrans_domain;
 ')
 
+#####################################
+## <summary>
+##  named_filetrans_domain stub attribute interface.  No access allowed.
+## </summary>
+## <param name="domain" unused="true">
+##  <summary>
+##  Domain allowed access
+##  </summary>
+## </param>
+#
+interface(`domain_stub_named_filetrans_domain',`
+    gen_require(`
+        attribute named_filetrans_domain;
+    ')
+')
+
 ########################################
 ## <summary>
 ##	Unconfined access to domains.
@@ -1584,6 +1676,7 @@ interface(`domain_unconfined',`
 	mcs_process_set_categories($1)
 
 	userdom_filetrans_home_content($1)
+	domain_named_filetrans($1)
 ')
 
 ########################################
@@ -1639,4 +1732,78 @@ interface(`domain_dontaudit_access_check',`
 	')
 
 	dontaudit $1 domain:dir_file_class_set audit_access;
+')
+
+########################################
+## <summary>
+##	Allow set resource limits to all domains.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`domain_setrlimit_all_domains',`
+	gen_require(`
+		attribute domain;
+	')
+
+	allow $1 domain:process setrlimit;
+')
+
+########################################
+## <summary>
+##	Allow set resource limits to all domains.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`domain_rlimitinh_all_domains',`
+	gen_require(`
+		attribute domain;
+	')
+
+	allow $1 domain:process rlimitinh;
+')
+
+########################################
+## <summary>
+##	Allow all domains noatsecure permission
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`domain_noatsecure_all_domains',`
+	gen_require(`
+		attribute domain;
+	')
+
+    allow $1 domain:process { noatsecure };
+')
+
+######################################
+## <summary>
+##  Allow domain dyntransition to all domains in domain attribute.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed to transition.
+##  </summary>
+## </param>
+#
+interface(`domain_dyntrans',`
+    gen_require(`
+        attribute domain;
+    ')
+
+    dyntrans_pattern($1, domain)
 ')

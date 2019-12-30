@@ -36,8 +36,8 @@ role fail2ban_client_roles types fail2ban_client_t;
 # Server Local policy
 #
 
-allow fail2ban_t self:capability { dac_read_search dac_override sys_tty_config };
-allow fail2ban_t self:process { setsched signal };
+allow fail2ban_t self:capability { dac_read_search sys_tty_config };
+allow fail2ban_t self:process { getpgid setsched signal };
 allow fail2ban_t self:fifo_file rw_fifo_file_perms;
 allow fail2ban_t self:unix_stream_socket { accept connectto listen };
 allow fail2ban_t self:tcp_socket { accept listen };
@@ -63,6 +63,8 @@ manage_files_pattern(fail2ban_t, fail2ban_var_run_t, fail2ban_var_run_t)
 files_pid_filetrans(fail2ban_t, fail2ban_var_run_t, file)
 
 kernel_read_system_state(fail2ban_t)
+kernel_read_network_state(fail2ban_t)
+
 
 corecmd_exec_bin(fail2ban_t)
 corecmd_exec_shell(fail2ban_t)
@@ -95,11 +97,11 @@ logging_send_syslog_msg(fail2ban_t)
 logging_read_syslog_pid(fail2ban_t)
 logging_dontaudit_search_audit_logs(fail2ban_t)
 logging_mmap_generic_logs(fail2ban_t)
+logging_mmap_journal(fail2ban_t)
 
 mta_send_mail(fail2ban_t)
 
 sysnet_manage_config(fail2ban_t)
-sysnet_filetrans_named_content(fail2ban_t)
 
 optional_policy(`
 	apache_read_log(fail2ban_t)
@@ -107,8 +109,7 @@ optional_policy(`
 
 optional_policy(`
 	dbus_system_bus_client(fail2ban_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(fail2ban_t)
+	dbus_connect_system_bus(fail2ban_t)
 
 	optional_policy(`
 		firewalld_dbus_chat(fail2ban_t)
@@ -128,6 +129,12 @@ optional_policy(`
 ')
 
 optional_policy(`
+	allow fail2ban_t self:capability sys_resource;
+	allow fail2ban_t self:process setrlimit;
+	journalctl_exec(fail2ban_t)
+')
+
+optional_policy(`
 	libs_exec_ldconfig(fail2ban_t)
 ')
 
@@ -144,10 +151,12 @@ optional_policy(`
 # Client Local policy
 #
 
-allow fail2ban_client_t self:capability dac_read_search;
+allow fail2ban_client_t self:capability { dac_read_search  };
 allow fail2ban_client_t self:unix_stream_socket { create connect write read };
 
 domtrans_pattern(fail2ban_client_t, fail2ban_exec_t, fail2ban_t)
+
+allow fail2ban_client_t fail2ban_t:process { rlimitinh };
 
 dontaudit fail2ban_client_t fail2ban_var_run_t:dir_file_class_set audit_access;
 allow fail2ban_client_t fail2ban_var_run_t:dir write;
@@ -165,6 +174,8 @@ domain_use_interactive_fds(fail2ban_client_t)
 files_search_pids(fail2ban_client_t)
 
 auth_use_nsswitch(fail2ban_client_t)
+
+libs_exec_ldconfig(fail2ban_client_t)
 
 logging_getattr_all_logs(fail2ban_client_t)
 logging_search_all_logs(fail2ban_client_t)

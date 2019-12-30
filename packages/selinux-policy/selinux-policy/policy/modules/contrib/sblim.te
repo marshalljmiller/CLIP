@@ -51,6 +51,7 @@ manage_sock_files_pattern(sblim_domain, sblim_tmp_t, sblim_tmp_t)
 files_tmp_filetrans(sblim_domain, sblim_tmp_t, { dir file sock_file})
 
 kernel_read_network_state(sblim_domain)
+kernel_read_sysctl(sblim_domain)
 
 corenet_tcp_sendrecv_generic_if(sblim_domain)
 corenet_tcp_sendrecv_generic_node(sblim_domain)
@@ -68,7 +69,7 @@ auth_read_passwd(sblim_domain)
 # Gatherd local policy
 #
 
-allow sblim_gatherd_t self:capability { dac_override sys_nice };
+allow sblim_gatherd_t self:capability { dac_read_search  sys_nice sys_ptrace };
 allow sblim_gatherd_t self:process { setsched signal };
 allow sblim_gatherd_t self:fifo_file rw_fifo_file_perms;
 allow sblim_gatherd_t self:unix_stream_socket { accept listen };
@@ -94,6 +95,8 @@ fs_search_cgroup_dirs(sblim_gatherd_t)
 
 storage_raw_read_fixed_disk(sblim_gatherd_t)
 storage_raw_read_removable_device(sblim_gatherd_t)
+
+auth_use_nsswitch(sblim_gatherd_t)
 
 init_read_utmp(sblim_gatherd_t)
 
@@ -140,6 +143,8 @@ corenet_tcp_bind_repository_port(sblim_reposd_t)
 
 logging_send_syslog_msg(sblim_reposd_t)
 
+miscfiles_read_certs(sblim_reposd_t)
+
 #######################################
 #
 # Sfcbd local policy
@@ -152,6 +157,7 @@ allow sblim_sfcbd_t self:unix_stream_socket connectto;
 manage_dirs_pattern(sblim_sfcbd_t, sblim_sfcb_tmpfs_t, sblim_sfcb_tmpfs_t)
 manage_files_pattern(sblim_sfcbd_t, sblim_sfcb_tmpfs_t, sblim_sfcb_tmpfs_t)
 fs_tmpfs_filetrans(sblim_sfcbd_t, sblim_sfcb_tmpfs_t, { dir file })
+allow sblim_sfcbd_t sblim_sfcb_tmpfs_t:file map;
 
 auth_use_nsswitch(sblim_sfcbd_t)
 auth_domtrans_chkpwd(sblim_sfcbd_t)
@@ -188,4 +194,8 @@ optional_policy(`
     virt_stream_connect(sblim_sfcbd_t)
     virt_search_images(sblim_sfcbd_t)
     virt_getattr_images(sblim_sfcbd_t)
+')
+
+optional_policy(`
+    qemu_getattr_exec(sblim_sfcbd_t)
 ')

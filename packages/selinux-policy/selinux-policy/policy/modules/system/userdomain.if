@@ -126,10 +126,9 @@ template(`userdom_base_user_template',`
 
 	fs_list_cgroup_dirs($1_usertype)
 	fs_dontaudit_rw_cgroup_files($1_usertype)
+    fs_read_tmpfs_symlinks($1_usertype)
 
 	storage_rw_fuse($1_usertype)
-
-	auth_use_nsswitch($1_t)
 
 	init_stream_connect($1_usertype)
 	# The library functions always try to open read-write first,
@@ -172,11 +171,6 @@ template(`userdom_base_user_template',`
         ssh_rw_dgram_sockets($1_usertype)
 		ssh_delete_tmp($1_t)
 		ssh_signal($1_t)
-	')
-
-	# SRS: all interactive GUI logins chat with org.freedesktop.systemd1
-	optional_policy(`
-		init_dbus_chat($1_t)
 	')
 ')
 
@@ -338,6 +332,25 @@ interface(`userdom_manage_tmp_files',`
 
 #######################################
 ## <summary>
+##	Mmap user temporary files
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolebase/>
+#
+interface(`userdom_map_tmp_files',`
+	gen_require(`
+		type user_tmp_t;
+	')
+
+	allow $1 user_tmp_t:file map;
+')
+
+#######################################
+## <summary>
 ##	Manage user temporary sockets
 ## </summary>
 ## <param name="domain">
@@ -353,26 +366,6 @@ interface(`userdom_manage_tmp_sockets',`
 	')
 
 	manage_sock_files_pattern($1, user_tmp_t, user_tmp_t)
-')
-
-
-#######################################
-## <summary>
-##      Mmap user temporary files
-## </summary>
-## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
-## </param>
-## <rolebase/>
-#
-interface(`userdom_map_tmp_files',`
-        gen_require(`
-                type user_tmp_t;
-        ')
-
-        allow $1 user_tmp_t:file map;
 ')
 
 #######################################
@@ -452,6 +445,7 @@ interface(`userdom_manage_tmp_role',`
 	relabel_lnk_files_pattern($2, user_tmp_type, user_tmp_type)
 	relabel_sock_files_pattern($2, user_tmp_type, user_tmp_type)
 	relabel_fifo_files_pattern($2, user_tmp_type, user_tmp_type)
+    allow $2 user_tmp_type:file map;
 ')
 
 #######################################
@@ -630,24 +624,24 @@ template(`userdom_xwindows_client_template',`
 	dev_rw_usbfs($1_t)
 	dev_rw_generic_usb_dev($1_t)
 
-	optional_policy(`
-		xserver_user_x_domain_template($1, $1_t, user_tmpfs_t)
-		xserver_xsession_entry_type($1_t)
-		xserver_dontaudit_write_log($1_t)
-		xserver_stream_connect_xdm($1_t)
-		# certain apps want to read xdm.pid file
-		xserver_read_xdm_pid($1_t)
-		# gnome-session creates socket under /tmp/.ICE-unix/
-		xserver_create_xdm_tmp_sockets($1_t)
-		# Needed for escd, remove if we get escd policy
-		xserver_manage_xdm_tmp_files($1_t)
-		miscfiles_map_fonts($1_t)
-	')
+	xserver_user_x_domain_template($1, $1_t, user_tmpfs_t)
+	xserver_xsession_entry_type($1_t)
+	xserver_dontaudit_write_log($1_t)
+	xserver_stream_connect_xdm($1_t)
+	# certain apps want to read xdm.pid file
+	xserver_read_xdm_pid($1_t)
+	# gnome-session creates socket under /tmp/.ICE-unix/
+	xserver_create_xdm_tmp_sockets($1_t)
+	# Needed for escd, remove if we get escd policy
+	xserver_manage_xdm_tmp_files($1_t)
 ')
 
 #######################################
 ## <summary>
 ##	The template for allowing the user to change passwords.
+##	NOTE! This template also allows the user to change shell.
+##	If you want to only allow changing passwords, you should
+##	use usermanage_run_passwd() instead.
 ## </summary>
 ## <param name="userdomain_prefix">
 ##	<summary>
@@ -692,19 +686,19 @@ template(`userdom_common_user_template',`
 		attribute unpriv_userdomain;
 	')
 
-	# SRS: removed for CLIP - gives access to all client/server packets
-	#userdom_basic_networking($1_usertype)
-	#corenet_all_recvfrom_netlabel($1_t)
+	userdom_basic_networking($1_usertype)
+	corenet_all_recvfrom_netlabel($1_t)
 
 	##############################
 	#
 	# User domain Local policy
 	#
-	#allow $1_t self:packet_socket create_socket_perms;
+	allow $1_t self:packet_socket create_socket_perms;
 
 	# evolution and gnome-session try to create a netlink socket
 	dontaudit $1_t self:netlink_socket { create ioctl read getattr write setattr append bind connect getopt setopt shutdown };
 	dontaudit $1_t self:netlink_route_socket { create ioctl read getattr write setattr append bind connect getopt setopt shutdown nlmsg_read nlmsg_write };
+    allow $1_t self:netlink_selinux_socket create_socket_perms;
 	allow $1_t self:netlink_kobject_uevent_socket create_socket_perms;
 	allow $1_t self:socket create_socket_perms;
 
@@ -714,25 +708,24 @@ template(`userdom_common_user_template',`
 	kernel_read_network_state($1_usertype)
 	kernel_read_software_raid_state($1_usertype)
 	kernel_read_net_sysctls($1_usertype)
+    kernel_read_afs_state($1_usertype)
 	# Very permissive allowing every domain to see every type:
 	kernel_get_sysvipc_info($1_usertype)
 	# Find CDROM devices:
 	kernel_read_device_sysctls($1_usertype)
 	kernel_request_load_module($1_usertype)
 
-	# SRS: removed for CLIP
-	# corenet_udp_bind_generic_node($1_usertype)
-	# corenet_udp_bind_generic_port($1_usertype)
+	corenet_udp_bind_generic_node($1_usertype)
+	corenet_udp_bind_generic_port($1_usertype)
 
 	dev_read_rand($1_usertype)
-	# SRS removed for CLIP
-	#dev_write_sound($1_usertype)
-	#dev_read_sound($1_usertype)
-	#dev_read_sound_mixer($1_usertype)
-	#dev_write_sound_mixer($1_usertype)
+	dev_write_sound($1_usertype)
+	dev_read_sound($1_usertype)
+	dev_read_sound_mixer($1_usertype)
+	dev_write_sound_mixer($1_usertype)
+	dev_rw_inherited_input_dev($1_usertype)
 
-	# SRS: removed for CLIP
-	#files_exec_etc_files($1_usertype)
+	files_exec_etc_files($1_usertype)
 	files_search_locks($1_usertype)
 	# Check to see if cdrom is mounted
 	files_search_mnt($1_usertype)
@@ -777,19 +770,21 @@ template(`userdom_common_user_template',`
 
 	init_read_utmp($1_usertype)
 
-	optional_policy(`
-		seutil_read_file_contexts($1_usertype)
-		seutil_read_default_contexts($1_usertype)
-		seutil_run_newrole($1_t,$1_r)
-		seutil_exec_checkpolicy($1_t)
-		seutil_exec_setfiles($1_usertype)
-		# for when the network connection is killed
-		# this is needed when a login role can change
-		# to this one.
-		seutil_dontaudit_signal_newrole($1_t)
-	')
+	seutil_read_file_contexts($1_usertype)
+	seutil_read_default_contexts($1_usertype)
+	seutil_run_newrole($1_t,$1_r)
+	seutil_exec_checkpolicy($1_t)
+	seutil_exec_setfiles($1_usertype)
+	# for when the network connection is killed
+	# this is needed when a login role can change
+	# to this one.
+	seutil_dontaudit_signal_newrole($1_t)
 
 	term_getattr_all_ttys($1_t)
+
+    optional_policy(`
+        afs_read_config($1_t)
+    ')
 
 	optional_policy(`
 		# Allow graphical boot to check battery lifespan
@@ -837,24 +832,29 @@ template(`userdom_common_user_template',`
 			evolution_alarm_dbus_chat($1_usertype)
 		')
 
-#        optional_policy(`
-#            firewalld_dbus_chat($1_usertype)
-#        ')
+        optional_policy(`
+            firewalld_dbus_chat($1_usertype)
+        ')
 
 		optional_policy(`
 			geoclue_dbus_chat($1_usertype)
 		')
 
-#		optional_policy(`
-#			gnome_dbus_chat_gconfdefault($1_usertype)
-#		')
+		optional_policy(`
+			gnome_dbus_chat_gconfdefault($1_usertype)
+		')
 
 		optional_policy(`
 			hal_dbus_chat($1_usertype)
 		')
 
 		optional_policy(`
-			kde_dbus_chat_backlighthelper($1_usertype)
+		hwloc_exec_dhwd($1_t)
+		hwloc_read_runtime_files($1_t)
+	')
+
+	optional_policy(`
+		kde_dbus_chat_backlighthelper($1_usertype)
 		')
 
         optional_policy(`
@@ -865,10 +865,10 @@ template(`userdom_common_user_template',`
 			modemmanager_dbus_chat($1_usertype)
 		')
 
-#		optional_policy(`
-#			networkmanager_dbus_chat($1_usertype)
-#			networkmanager_read_lib_files($1_usertype)
-#		')
+		optional_policy(`
+			networkmanager_dbus_chat($1_usertype)
+			networkmanager_read_lib_files($1_usertype)
+		')
 
 		optional_policy(`
 			policykit_dbus_chat($1_usertype)
@@ -909,9 +909,9 @@ template(`userdom_common_user_template',`
 	')
 
 	# for running depmod as part of the kernel packaging process
-	#optional_policy(`
-	#	modutils_read_module_config($1_usertype)
-	#')
+	optional_policy(`
+		modutils_read_module_config($1_usertype)
+	')
 
 	optional_policy(`
 		mta_rw_spool($1_usertype)
@@ -973,9 +973,9 @@ template(`userdom_common_user_template',`
 		sandbox_transition($1_usertype, $1_r)
 	')
 
-	#optional_policy(`
-	#	seunshare_role_template($1, $1_r, $1_t)
-	#')
+	optional_policy(`
+		seunshare_role_template($1, $1_r, $1_t)
+	')
 
 	optional_policy(`
 		slrnpull_search_spool($1_usertype)
@@ -1034,6 +1034,7 @@ template(`userdom_login_user_template', `
 		')
 	')
 
+	# NOTE! This template also allows user to change shell.
 	userdom_change_password_template($1)
 
 	##############################
@@ -1075,6 +1076,7 @@ template(`userdom_login_user_template', `
 	fs_list_inotifyfs($1_usertype)
 	fs_rw_anon_inodefs_files($1_usertype)
 
+    auth_read_passwd($1_t)
 	auth_role($1_r, $1_t)
     auth_create_cache($1_t)
 	auth_rw_cache($1_t)
@@ -1090,6 +1092,9 @@ template(`userdom_login_user_template', `
 	# Stop warnings about access to /dev/console
 	init_dontaudit_use_fds($1_usertype)
 	init_dontaudit_use_script_fds($1_usertype)
+
+    # Needed by pam_selinux.so calling in systemd-users
+    init_entrypoint_exec(login_userdomain)
 
 	libs_exec_lib_files($1_usertype)
 
@@ -1135,12 +1140,24 @@ template(`userdom_login_user_template', `
 
 	optional_policy(`
 		oddjob_run_mkhomedir($1_t, $1_r)
+		oddjob_run($1_t, $1_r)
 	')
+
+    optional_policy(`
+        chronyd_run_chronyc($1_t, $1_r)
+    ')
+
+    optional_policy(`
+        ipa_run_helper($1_t, $1_r)
+    ')
 
 	optional_policy(`
 		wine_filetrans_named_content($1_usertype)
 	')
 
+    optional_policy(`
+        sssd_stream_connect($1_t)
+    ')
 ')
 
 #######################################
@@ -1216,7 +1233,12 @@ template(`userdom_restricted_xwindows_user_template',`
 	#
 	# Local policy
 	#
+	allow $1_usertype self:cap_userns { sys_admin sys_chroot };
+	dontaudit $1_usertype self:cap_userns sys_ptrace;
+	allow $1_usertype self:dir { add_name write };
+
 	kernel_stream_connect($1_usertype)
+	fs_associate_proc($1_usertype)
 
 	dev_read_sound($1_usertype)
 	dev_write_sound($1_usertype)
@@ -1232,6 +1254,7 @@ template(`userdom_restricted_xwindows_user_template',`
 	libs_dontaudit_setattr_lib_files($1_usertype)
 
 	init_read_state($1_usertype)
+	init_signal($1_usertype)
 
 	tunable_policy(`selinuxuser_rw_noexattrfile',`
 		dev_rw_usbfs($1_t)
@@ -1254,9 +1277,7 @@ template(`userdom_restricted_xwindows_user_template',`
 	seutil_read_file_contexts($1_t)
 	seutil_read_default_contexts($1_t)
 
-	optional_policy(`
-		xserver_restricted_role($1_r, $1_t)
-	')
+	xserver_restricted_role($1_r, $1_t)
 
 	optional_policy(`
 		alsa_read_rw_config($1_usertype)
@@ -1275,9 +1296,7 @@ template(`userdom_restricted_xwindows_user_template',`
 	')
 
 	optional_policy(`
-
-                # BMW Not clear that all users should have unfettered dbus access
-#		dbus_role_template($1, $1_r, $1_usertype)
+		dbus_role_template($1, $1_r, $1_usertype)
 		dbus_system_bus_client($1_usertype)
 		allow $1_usertype $1_usertype:dbus send_msg;
 
@@ -1329,7 +1348,7 @@ template(`userdom_restricted_xwindows_user_template',`
 
 	optional_policy(`
 		pulseaudio_role($1_r, $1_usertype)
-		pulseaudio_filetrans_admin_home_content($1_usertype)
+		pulseaudio_filetrans_home_content($1_usertype)
 	')
 
 	optional_policy(`
@@ -1392,15 +1411,28 @@ template(`userdom_unpriv_user_template', `
 	# Local policy
 	#
 	allow $1_t self:capability { setgid chown fowner };
+    allow $1_t self:alg_socket create_socket_perms;
+    allow $1_t self:dccp_socket create_socket_perms;
+    allow $1_t self:netlink_tcpdiag_socket create_netlink_socket_perms;
+    dontaudit $1_t self:capability { setuid };
+    dontaudit $1_t self:netlink_selinux_socket create_socket_perms;
+
+tunable_policy(`deny_bluetooth',`',`
+    allow $1_t self:bluetooth_socket create_socket_perms;
+')
+
+	auth_use_nsswitch($1_t)
 
 	corecmd_exec_chroot($1_t)
 
 	# port access is audited even if dac would not have allowed it, so dontaudit it here
 #	corenet_dontaudit_tcp_bind_all_reserved_ports($1_t)
 	# Need the following rule to allow users to run vpnc
-	# SRS: removed for CLIP
-	#corenet_tcp_bind_xserver_port($1_t)
-	#corenet_tcp_bind_generic_node($1_usertype)
+	corenet_tcp_bind_xserver_port($1_t)
+	corenet_tcp_bind_generic_node($1_usertype)
+
+    init_domtrans($1_t)
+    init_rw_stream_sockets($1_t)
 
 	storage_rw_fuse($1_t)
 
@@ -1424,24 +1456,24 @@ template(`userdom_unpriv_user_template', `
 
 	miscfiles_read_hwdata($1_usertype)
 
+    fs_manage_cgroup_dirs($1_t)
 	fs_mounton_fusefs($1_usertype)
 
 	# Allow users to run TCP servers (bind to ports and accept connection from
 	# the same domain and outside users) disabling this forces FTP passive mode
 	# and may change other protocols
 
-	# SRS: removed for CLIP
-	#tunable_policy(`selinuxuser_share_music',`
-	#	corenet_tcp_bind_daap_port($1_usertype)
-	#')
+	tunable_policy(`selinuxuser_share_music',`
+		corenet_tcp_bind_daap_port($1_usertype)
+	')
 
-#	tunable_policy(`selinuxuser_tcp_server',`
-#		corenet_tcp_bind_all_unreserved_ports($1_usertype)
-#	')
+	tunable_policy(`selinuxuser_tcp_server',`
+		corenet_tcp_bind_all_unreserved_ports($1_usertype)
+	')
 
-#	tunable_policy(`selinuxuser_udp_server',`
-#		corenet_udp_bind_all_unreserved_ports($1_usertype)
-#	')
+	tunable_policy(`selinuxuser_udp_server',`
+		corenet_udp_bind_all_unreserved_ports($1_usertype)
+	')
 	optional_policy(`
 		cdrecord_role($1_r, $1_t)
 	')
@@ -1558,12 +1590,25 @@ template(`userdom_admin_user_template',`
 	# Manipulate other users crontab.
 	allow $1_t self:passwd crontab;
 
+    allow $1_t self:bpf { map_create map_read map_write prog_load prog_run };
+    allow $1_t self:alg_socket create_stream_socket_perms;
+    allow $1_t self:dccp_socket create_stream_socket_perms;
+
+    allow $1_t self:cap_userns sys_ptrace;
+
+    tunable_policy(`deny_bluetooth',`',`
+        allow $1_t self:bluetooth_socket create_stream_socket_perms;
+    ')
+
+	auth_use_nsswitch($1_t)
+
 	kernel_read_software_raid_state($1_t)
 	kernel_getattr_core_if($1_t)
 	kernel_getattr_message_if($1_t)
 	kernel_change_ring_buffer_level($1_t)
 	kernel_clear_ring_buffer($1_t)
 	kernel_read_ring_buffer($1_t)
+    kernel_read_afs_state($1_t)
 	kernel_get_sysvipc_info($1_t)
 	kernel_rw_all_sysctls($1_t)
 	# signal unlabeled processes:
@@ -1573,6 +1618,7 @@ template(`userdom_admin_user_template',`
 	kernel_signull_unlabeled($1_t)
 	kernel_sigchld_unlabeled($1_t)
 	kernel_signal($1_t)
+    kernel_stream_connect($1_t)
 
 	corenet_tcp_bind_generic_port($1_t)
 	# allow setting up tunnels
@@ -1583,15 +1629,15 @@ template(`userdom_admin_user_template',`
 	# for lsof
 	dev_getattr_mtrr_dev($1_t)
 	# Allow MAKEDEV to work
-	#dev_create_all_blk_files($1_t)
-	#dev_create_all_chr_files($1_t)
-	#dev_delete_all_blk_files($1_t)
-	#dev_delete_all_chr_files($1_t)
-	#dev_rename_all_blk_files($1_t)
-	#dev_rename_all_chr_files($1_t)
+	dev_create_all_blk_files($1_t)
+	dev_create_all_chr_files($1_t)
+	dev_delete_all_blk_files($1_t)
+	dev_delete_all_chr_files($1_t)
+	dev_rename_all_blk_files($1_t)
+	dev_rename_all_chr_files($1_t)
 	dev_create_generic_symlinks($1_t)
-	#dev_rw_generic_usb_dev($1_t)
-	#dev_rw_usbfs($1_t)
+	dev_rw_generic_usb_dev($1_t)
+	dev_rw_usbfs($1_t)
 	dev_read_kmsg($1_t)
 	dev_read_cpuid($1_t)
 
@@ -1619,8 +1665,8 @@ template(`userdom_admin_user_template',`
 	fs_set_all_quotas($1_t)
 	fs_exec_noxattr($1_t)
 
-	#storage_raw_read_removable_device($1_t)
-	#storage_raw_write_removable_device($1_t)
+	storage_raw_read_removable_device($1_t)
+	storage_raw_write_removable_device($1_t)
 	storage_dontaudit_read_fixed_disk($1_t)
 
 	term_use_all_inherited_terms($1_t)
@@ -1631,7 +1677,7 @@ template(`userdom_admin_user_template',`
 	files_manage_non_security_dirs($1_t)
 	files_manage_non_security_files($1_t)
 	# Relabel almost all files
-	#files_relabel_non_security_files($1_t)
+	files_relabel_non_security_files($1_t)
 
     files_mounton_rootfs($1_t)
 
@@ -1640,8 +1686,7 @@ template(`userdom_admin_user_template',`
 	logging_send_syslog_msg($1_t)
 
 	optional_policy(`
-		modutils_domtrans_insmod($1_t)
-		modutils_domtrans_depmod($1_t)
+		modutils_domtrans_kmod($1_t)
 	')
 
 	# The following rule is temporary until such time that a complete
@@ -1650,7 +1695,7 @@ template(`userdom_admin_user_template',`
 	seutil_manage_src_policy($1_t)
 	# Violates the goal of limiting write access to checkpolicy.
 	# But presently necessary for installing the file_contexts file.
-	#seutil_manage_bin_policy($1_t)
+	seutil_manage_bin_policy($1_t)
 
 	systemd_config_all_services($1_t)
 
@@ -1675,13 +1720,28 @@ template(`userdom_admin_user_template',`
 	tunable_policy(`selinuxuser_udp_server',`
         corenet_udp_bind_all_unreserved_ports($1_t)
     ')
-      
+
+    optional_policy(`
+        afs_read_config($1_t)
+    ')
+
+	optional_policy(`
+		abrt_dbus_chat($1_t)
+		abrt_run_helper($1_t, $1_r)
+	')
+
 	optional_policy(`
 		postgresql_unconfined($1_t)
 	')
 
 	optional_policy(`
 		userhelper_exec($1_t)
+	')
+
+	optional_policy(`
+		vdagent_getattr_log($1_t)
+		vdagent_getattr_exec_files($1_t)
+		vdagent_stream_connect($1_t)
 	')
 ')
 
@@ -1712,7 +1772,9 @@ template(`userdom_admin_user_template',`
 ## </param>
 #
 template(`userdom_security_admin',`
-	allow $1 self:capability { dac_read_search dac_override };
+	allow $1 self:capability { audit_control dac_read_search  };
+
+    allow $1 self:netlink_audit_socket { nlmsg_write create_netlink_socket_perms };
 
 	corecmd_exec_shell($1)
 
@@ -1748,23 +1810,21 @@ template(`userdom_security_admin',`
 	logging_read_generic_logs($1)
 	logging_read_audit_config($1)
 
-	optional_policy(`
-		seutil_manage_bin_policy($1)
-		seutil_manage_default_contexts($1)
-		seutil_manage_file_contexts($1)
-		seutil_manage_module_store($1)
-		seutil_manage_config($1)
-		seutil_manage_login_config($1)
-		seutil_run_checkpolicy($1,$2)
-		seutil_run_loadpolicy($1,$2)
-		seutil_run_semanage($1,$2)
-		seutil_run_setsebool($1,$2)
-		seutil_run_setfiles($1, $2)
-	')
+	seutil_manage_bin_policy($1)
+	seutil_manage_default_contexts($1)
+	seutil_manage_file_contexts($1)
+	seutil_manage_module_store($1)
+	seutil_manage_config($1)
+	seutil_manage_login_config($1)
+	seutil_run_checkpolicy($1,$2)
+	seutil_run_loadpolicy($1,$2)
+	seutil_run_semanage($1,$2)
+	seutil_run_setsebool($1,$2)
+	seutil_run_setfiles($1, $2)
 
-	#optional_policy(`
-#		aide_run($1,$2)
-#	')
+	optional_policy(`
+		aide_run($1,$2)
+	')
 
 	optional_policy(`
 		consoletype_exec($1)
@@ -1885,7 +1945,8 @@ interface(`userdom_user_tmpfs_file',`
 
 ########################################
 ## <summary>
-##	Allow domain to attach to TUN devices created by administrative users.
+##	Make the specified type usable as
+##	user temporary content.
 ## </summary>
 ## <param name="type">
 ##	<summary>
@@ -2198,7 +2259,6 @@ interface(`userdom_relabelto_user_home_dirs',`
 	allow $1 user_home_dir_t:dir relabelto;
 ')
 
-
 ########################################
 ## <summary>
 ##	Relabel to user home files.
@@ -2232,6 +2292,24 @@ interface(`userdom_relabel_user_home_files',`
 	')
 
 	allow $1 user_home_t:file relabel_file_perms;
+')
+
+########################################
+## <summary>
+##	Relabel user home directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_relabel_user_home_dirs',`
+	gen_require(`
+		type user_home_dir_t;
+	')
+
+	allow $1 user_home_t:dir relabel_file_perms;
 ')
 
 ########################################
@@ -2309,10 +2387,10 @@ interface(`userdom_user_home_domtrans',`
 #
 interface(`userdom_dontaudit_search_user_home_content',`
 	gen_require(`
-		type user_home_t;
+		attribute user_home_type;
 	')
 
-	dontaudit $1 user_home_t:dir search_dir_perms;
+	dontaudit $1 user_home_type:dir search_dir_perms;
 	fs_dontaudit_list_nfs($1)
 	fs_dontaudit_list_cifs($1)
 ')
@@ -2392,6 +2470,24 @@ interface(`userdom_delete_user_home_content_dirs',`
 	')
 
 	allow $1 user_home_t:dir delete_dir_perms;
+')
+
+########################################
+## <summary>
+##	Delete files in a user home subdirectory.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_delete_user_home_content_files',`
+	gen_require(`
+		type user_home_t;
+	')
+
+	allow $1 user_home_t:file delete_file_perms;
 ')
 
 ########################################
@@ -2481,9 +2577,25 @@ interface(`userdom_create_user_tmp_sockets',`
 ## </param>
 #
 interface(`usedom_dontaudit_user_getattr_tmp_sockets',`
+    refpolicywarn(`$0($*) has been deprecated, use userdom_getattr_user_tmp_files() instead.')
+    userdom_getattr_user_tmp_files($1)
+')
+
+########################################
+## <summary>
+##	Dontaudit getattr on user tmp sockets.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_dontaudit_user_getattr_tmp_sockets',`
     gen_require(`
         type user_tmp_t;
     ')
+
     dontaudit $1 user_tmp_t:sock_file getattr_sock_file_perms;
 ')
 
@@ -2575,11 +2687,29 @@ interface(`userdom_setattr_all_user_home_content_dirs',`
 #
 interface(`userdom_mmap_user_home_content_files',`
 	gen_require(`
-		type user_home_dir_t, user_home_t;
+		type user_home_t;
 	')
 
-	mmap_files_pattern($1, { user_home_dir_t user_home_t }, user_home_t)
+	allow $1 user_home_t:file map;
 	files_search_home($1)
+')
+
+########################################
+## <summary>
+##	map user home files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_map_user_home_files',`
+	gen_require(`
+		type user_home_t;
+	')
+
+	allow $1 user_home_t:file map;
 ')
 
 ########################################
@@ -2647,6 +2777,24 @@ interface(`userdom_dontaudit_read_user_home_content_files',`
 
 ########################################
 ## <summary>
+##	Do not audit attempts to mmap user home files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_dontaudit_mmap_user_home_content_files',`
+	gen_require(`
+		attribute user_home_type;
+	')
+
+	dontaudit $1 user_home_type:file map;
+')
+
+########################################
+## <summary>
 ##	Do not audit attempts to append user home files.
 ## </summary>
 ## <param name="domain">
@@ -2679,25 +2827,6 @@ interface(`userdom_dontaudit_write_user_home_content_files',`
 	')
 
 	dontaudit $1 user_home_t:file write_file_perms;
-')
-
-########################################
-## <summary>
-##	Delete files in a user home subdirectory.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`userdom_delete_user_home_content_files',`
-	gen_require(`
-		type user_home_t;
-	')
-
-	userdom_search_user_home_content($1)
-	delete_files_pattern($1, { user_home_dir_t user_home_content_type }, user_home_content_type)
 ')
 
 ########################################
@@ -2866,6 +2995,7 @@ interface(`userdom_manage_user_home_content_files',`
 
 	manage_files_pattern($1, user_home_t, user_home_t)
 	allow $1 user_home_dir_t:dir search_dir_perms;
+	allow $1 user_home_t:file map;
 	files_search_home($1)
 ')
 
@@ -3240,7 +3370,6 @@ interface(`userdom_dontaudit_read_user_tmp_files',`
 	')
 
 	dontaudit $1 user_tmp_t:file read_inherited_file_perms;
-	dontaudit $1 user_tmp_t:dir search;
 ')
 
 ########################################
@@ -3928,7 +4057,6 @@ interface(`userdom_xsession_spec_domtrans_all_users',`
 	')
 
 	xserver_xsession_spec_domtrans($1, userdomain)
-
 	allow userdomain $1:fd use;
 	allow userdomain $1:fifo_file rw_file_perms;
 	allow userdomain $1:process sigchld;
@@ -4053,16 +4181,15 @@ interface(`userdom_manage_unpriv_user_shared_mem',`
 	allow $1 unpriv_userdomain:shm create_shm_perms;
 ')
 
-
 ########################################
 ## <summary>
-##      Destroy unpriviledged user SysV shared
-##      memory segments.
+##	Destroy unpriviledged user SysV shared
+##	memory segments.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 #
 interface(`userdom_destroy_unpriv_user_shared_mem',`
@@ -4813,6 +4940,97 @@ interface(`userdom_search_admin_dir',`
 
 ########################################
 ## <summary>
+##	dontaudit create dirs /root
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_dontaudit_create_admin_dir',`
+	gen_require(`
+		type admin_home_t;
+	')
+
+	dontaudit $1 admin_home_t:dir create_dir_perms;
+')
+
+
+########################################
+## <summary>
+##	allow manage dirs /root
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_manage_admin_dirs',`
+	gen_require(`
+		type admin_home_t;
+	')
+
+	allow $1 admin_home_t:dir manage_dir_perms;
+')
+
+########################################
+## <summary>
+##	allow manage files /root
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_manage_admin_files',`
+	gen_require(`
+		type admin_home_t;
+	')
+
+	allow $1 admin_home_t:file manage_file_perms;
+')
+
+########################################
+## <summary>
+##	dontaudit manage dirs /root
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_dontaudit_manage_admin_dir',`
+	gen_require(`
+		type admin_home_t;
+	')
+
+	dontaudit $1 admin_home_t:dir manage_dir_perms;
+')
+
+########################################
+## <summary>
+##	dontaudit manage files /root
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`userdom_dontaudit_manage_admin_files',`
+	gen_require(`
+		type admin_home_t;
+	')
+
+	dontaudit $1 admin_home_t:file manage_file_perms;
+')
+
+########################################
+## <summary>
 ##	RW unpriviledged user SysV sempaphores.
 ## </summary>
 ## <param name="domain">
@@ -4880,7 +5098,7 @@ interface(`userdom_users_dgram_send',`
 #
 interface(`userdom_execmod_user_home_files',`
 	gen_require(`
-		type user_home_type;
+		attribute user_home_type;
 	')
 
 	allow $1 user_home_type:file execmod;
@@ -5128,6 +5346,8 @@ interface(`userdom_write_user_tmp_dirs',`
 		type user_tmp_t;
 	')
 
+	list_dirs_pattern($1, user_tmp_t, user_tmp_t)
+	rw_dirs_pattern($1, user_tmp_t, user_tmp_t)
 	write_files_pattern($1, user_tmp_t, user_tmp_t)
 ')
 
@@ -5185,6 +5405,24 @@ interface(`userdom_rw_stream',`
 	')
 
 	allow $1 userdomain:unix_stream_socket rw_socket_perms;
+')
+
+########################################
+## <summary>
+##	Read and write	userdomain stream.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_connectto_stream',`
+	gen_require(`
+		attribute userdomain;
+	')
+
+	allow $1 userdomain:unix_stream_socket connectto;
 ')
 
 ########################################
@@ -5258,7 +5496,7 @@ interface(`userdom_read_inherited_user_home_content_files',`
 #
 interface(`userdom_dontaudit_read_inherited_admin_home_files',`
 	gen_require(`
-		attribute admin_home_t;
+		type admin_home_t;
 	')
 
 	dontaudit $1 admin_home_t:file read_inherited_file_perms;
@@ -5276,7 +5514,7 @@ interface(`userdom_dontaudit_read_inherited_admin_home_files',`
 #
 interface(`userdom_dontaudit_append_inherited_admin_home_file',`
 	gen_require(`
-		attribute admin_home_t;
+		type admin_home_t;
 	')
 
 	dontaudit $1 admin_home_t:file append_inherited_file_perms;
@@ -5378,12 +5616,13 @@ interface(`userdom_manage_home_texlive',`
         ')
 
     userdom_search_user_home_dirs($1)
-	userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2012")
-	userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2013")
-	userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2014")
+    userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2012")
+    userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2013")
+    userdom_user_home_dir_filetrans($1, texlive_home_t, dir, ".texlive2014")
     manage_dirs_pattern($1, texlive_home_t, texlive_home_t)
     manage_files_pattern($1, texlive_home_t, texlive_home_t)
-	manage_lnk_files_pattern($1, texlive_home_t, texlive_home_t)
+    manage_lnk_files_pattern($1, texlive_home_t, texlive_home_t)
+    allow $1 texlive_home_t:file relabelfrom;
 ')
 
 ########################################
@@ -5525,6 +5764,24 @@ interface(`userdom_read_home_certs',`
 	')
 
     typeattribute $1 userdom_home_reader_certs_type;
+')
+
+########################################
+## <summary>
+##	mmap system SSL certificates in the users homedir.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_map_home_certs',`
+	gen_require(`
+        type home_cert_t;
+	')
+
+    allow $1 home_cert_t:file map;
 ')
 
 ########################################
@@ -5719,6 +5976,24 @@ interface(`userdom_read_inherited_user_tmp_files',`
 
 ########################################
 ## <summary>
+##	Read/write/mmap all inherited users files in /tmp
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_mmap_rw_inherited_user_tmp_files',`
+	gen_require(`
+		type user_tmp_t;
+	')
+
+	allow $1 user_tmp_t:file mmap_rw_inherited_file_perms;
+')
+
+########################################
+## <summary>
 ##	Read/write all inherited users files in /tmp
 ## </summary>
 ## <param name="domain">
@@ -5800,8 +6075,8 @@ interface(`userdom_delete_user_tmp_files',`
 ## </param>
 #
 interface(`userdom_delete_user_tmpfs_files',`
-    refpolicywarn(`$0($*) has been deprecated, use userdom_delete_user_tmpfs_files instead.')
-    userdom_delete_user_tmpfs_files($1)
+    refpolicywarn(`$0($*) has been deprecated, use userdom_delete_user_tmp_files instead.')
+    userdom_delete_user_tmp_files($1)
 ')
 
 ########################################
@@ -6118,6 +6393,10 @@ interface(`userdom_filetrans_generic_home_content',`
     userdom_user_home_dir_filetrans($1, home_cert_t, dir, "certificates")
     userdom_user_home_dir_filetrans($1, user_tmp_t, dir, "tmp")
     userdom_user_home_dir_filetrans($1, user_tmp_t, dir, ".tmp")
+
+    optional_policy(`
+        gnome_data_filetrans($1, home_cert_t, dir, "certificates")
+    ')
 ')
 
 ########################################
@@ -6136,6 +6415,78 @@ interface(`userdom_transition',`
 	')
 
 	allow $1 userdomain:process transition;
+')
+
+########################################
+## <summary>
+##	Allow caller to transition to login userdomain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_transition_login_userdomain',`
+	gen_require(`
+		attribute login_userdomain;
+	')
+
+	allow $1 login_userdomain:process transition;
+')
+
+########################################
+## <summary>
+##	Allow caller noatsecure permission.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_noatsecure_login_userdomain',`
+	gen_require(`
+		attribute login_userdomain;
+	')
+
+	allow $1 login_userdomain:process noatsecure ;
+')
+
+########################################
+## <summary>
+##	Allow caller to send sigchld to login userdomain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_sigchld_login_userdomain',`
+	gen_require(`
+		attribute login_userdomain;
+	')
+
+	allow $1 login_userdomain:process sigchld;
+')
+
+########################################
+## <summary>
+##	Add caller login userdomain attribute.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_login_userdomain',`
+	gen_require(`
+		attribute login_userdomain;
+	')
+
+    typeattribute $1 login_userdomain;
 ')
 
 ########################################
@@ -6240,7 +6591,9 @@ template(`userdom_confined_admin_template',`
 ## </param>
 #
 template(`userdom_security_admin_template',`
-	allow $1 self:capability { dac_read_search dac_override };
+	allow $1 self:capability { audit_control dac_read_search  };
+
+    allow $1 self:netlink_audit_socket { nlmsg_write create_netlink_socket_perms };
 
 	corecmd_exec_shell($1)
 
@@ -6276,23 +6629,21 @@ template(`userdom_security_admin_template',`
 	logging_read_generic_logs($1)
 	logging_read_audit_config($1)
 
-	optional_policy(`
-		seutil_manage_bin_policy($1)
-		seutil_manage_default_contexts($1)
-		seutil_manage_file_contexts($1)
-		seutil_manage_module_store($1)
-		seutil_manage_config($1)
-		seutil_manage_login_config($1)
-		seutil_run_checkpolicy($1,$2)
-		seutil_run_loadpolicy($1,$2)
-		seutil_run_semanage($1,$2)
-		seutil_run_setsebool($1,$2)
-		seutil_run_setfiles($1, $2)
-	')
+	seutil_manage_bin_policy($1)
+	seutil_manage_default_contexts($1)
+	seutil_manage_file_contexts($1)
+	seutil_manage_module_store($1)
+	seutil_manage_config($1)
+	seutil_manage_login_config($1)
+	seutil_run_checkpolicy($1,$2)
+	seutil_run_loadpolicy($1,$2)
+	seutil_run_semanage($1,$2)
+	seutil_run_setsebool($1,$2)
+	seutil_run_setfiles($1, $2)
 
-#	optional_policy(`
-#		aide_run($1,$2)
-#	')
+	optional_policy(`
+		aide_run($1,$2)
+	')
 
 	optional_policy(`
 		consoletype_exec($1)

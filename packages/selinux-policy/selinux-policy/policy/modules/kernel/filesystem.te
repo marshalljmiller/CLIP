@@ -17,6 +17,7 @@ attribute noxattrfs;
 type fs_t;
 fs_type(fs_t)
 sid fs gen_context(system_u:object_r:fs_t,s0)
+typealias fs_t alias vxfs_t;
 
 # Use xattrs for the following filesystem types.
 # Requires that a security xattr handler exist for the filesystem.
@@ -34,10 +35,15 @@ fs_use_xattr jffs2 gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr jfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr lustre gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr ocfs2 gen_context(system_u:object_r:fs_t,s0);
+fs_use_xattr overlay gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr xfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr squashfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr zfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_xattr fuse.glusterfs gen_context(system_u:object_r:fs_t,s0);
+fs_use_xattr shiftfs gen_context(system_u:object_r:fs_t,s0);
+fs_use_xattr vxfs gen_context(system_u:object_r:fs_t,s0);
+fs_use_xattr odms gen_context(system_u:object_r:fs_t,s0);
+fs_use_xattr vxclonefs gen_context(system_u:object_r:fs_t,s0);
 
 # Use the allocating task SID to label inodes in the following filesystem
 # types, and label the filesystem itself with the specified context.
@@ -47,6 +53,7 @@ fs_use_xattr fuse.glusterfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_task eventpollfs gen_context(system_u:object_r:fs_t,s0);
 fs_use_task pipefs gen_context(system_u:object_r:fs_t,s0);
 fs_use_task sockfs gen_context(system_u:object_r:fs_t,s0);
+fs_use_task nsfs gen_context(system_u:object_r:fs_t,s0);
 
 ##############################
 #
@@ -68,6 +75,12 @@ fs_type(binfmt_misc_fs_t)
 files_mountpoint(binfmt_misc_fs_t)
 genfscon binfmt_misc / gen_context(system_u:object_r:binfmt_misc_fs_t,s0)
 
+type bpf_t alias bpffs_t;
+fs_type(bpf_t)
+files_mountpoint(bpf_t)
+dev_associate_sysfs(bpf_t)
+genfscon bpf / gen_context(system_u:object_r:bpf_t,s0)
+
 type oracleasmfs_t;
 fs_type(oracleasmfs_t)
 dev_node(oracleasmfs_t)
@@ -79,11 +92,17 @@ fs_type(capifs_t)
 files_mountpoint(capifs_t)
 genfscon capifs / gen_context(system_u:object_r:capifs_t,s0)
 
+type cephfs_t;
+fs_type(cephfs_t)
+files_mountpoint(cephfs_t)
+genfscon ceph / gen_context(system_u:object_r:cephfs_t,s0)
+
 type cgroup_t alias cgroupfs_t;
 fs_type(cgroup_t)
 files_mountpoint(cgroup_t)
 dev_associate_sysfs(cgroup_t)
 genfscon cgroup / gen_context(system_u:object_r:cgroup_t,s0)
+genfscon cgroup2 / gen_context(system_u:object_r:cgroup_t,s0)
 
 type configfs_t;
 fs_type(configfs_t)
@@ -100,8 +119,10 @@ files_mountpoint(ecryptfs_t)
 genfscon ecryptfs / gen_context(system_u:object_r:ecryptfs_t,s0)
 
 type efivarfs_t;
+fs_type(efivarfs_t)
 fs_noxattr_type(efivarfs_t)
 files_mountpoint(efivarfs_t)
+dev_associate_sysfs(efivarfs_t)
 genfscon efivarfs / gen_context(system_u:object_r:efivarfs_t,s0)
 
 type futexfs_t;
@@ -128,6 +149,12 @@ type inotifyfs_t;
 fs_type(inotifyfs_t)
 genfscon inotifyfs / gen_context(system_u:object_r:inotifyfs_t,s0)
 
+type kdbusfs_t;
+fs_type(kdbusfs_t)
+files_mountpoint(kdbusfs_t)
+dev_associate_sysfs(kdbusfs_t)
+genfscon kdbusfs / gen_context(system_u:object_r:kdbusfs_t,s0)
+
 type mvfs_t;
 fs_noxattr_type(mvfs_t)
 allow mvfs_t self:filesystem associate;
@@ -137,6 +164,15 @@ type nfsd_fs_t;
 fs_type(nfsd_fs_t)
 files_mountpoint(nfsd_fs_t)
 genfscon nfsd / gen_context(system_u:object_r:nfsd_fs_t,s0)
+
+type nsfs_t;
+fs_type(nsfs_t)
+genfscon nsfs / gen_context(system_u:object_r:nsfs_t,s0)
+
+type onload_fs_t;
+fs_type(onload_fs_t)
+files_mountpoint(onload_fs_t)
+genfscon onloadfs / gen_context(system_u:object_r:onload_fs_t,s0)
 
 type oprofilefs_t;
 fs_type(oprofilefs_t)
@@ -174,19 +210,17 @@ files_mountpoint(sysv_t)
 genfscon sysv / gen_context(system_u:object_r:sysv_t,s0)
 genfscon v7 / gen_context(system_u:object_r:sysv_t,s0)
 
+type tracefs_t;
+fs_type(tracefs_t)
+files_mountpoint(tracefs_t)
+genfscon tracefs / gen_context(system_u:object_r:tracefs_t,s0)
+
 type vmblock_t;
 fs_noxattr_type(vmblock_t)
 files_mountpoint(vmblock_t)
 genfscon vmblock / gen_context(system_u:object_r:vmblock_t,s0)
 genfscon vboxsf / gen_context(system_u:object_r:vmblock_t,s0)
 genfscon vmhgfs / gen_context(system_u:object_r:vmblock_t,s0)
-
-type vxfs_t;
-fs_noxattr_type(vxfs_t)
-files_mountpoint(vxfs_t)
-genfscon vxfs / gen_context(system_u:object_r:vxfs_t,s0)
-genfscon odmfs / gen_context(system_u:object_r:vxfs_t,s0)
-genfscon vxclonefs / gen_context(system_u:object_r:vxfs_t,s0)
 
 #
 # tmpfs_t is the type for tmpfs filesystems
@@ -306,6 +340,7 @@ genfscon 9p / gen_context(system_u:object_r:nfs_t,s0)
 # Rules for all filesystem types
 #
 
+fs_associate(filesystem_type)
 allow filesystem_type self:filesystem associate;
 
 ########################################
@@ -321,9 +356,10 @@ fs_associate_noxattr(noxattrfs)
 # Unconfined access to this module
 #
 
-allow filesystem_unconfined_type filesystem_type:filesystem *;
+allow filesystem_unconfined_type filesystem_type:filesystem all_filesystem_perms;
 
 # Create/access other files. fs_type is to pick up various
 # pseudo filesystem types that are applied to both the filesystem
 # and its files.
-allow filesystem_unconfined_type filesystem_type:{ dir file lnk_file sock_file fifo_file chr_file blk_file } *;
+allow filesystem_unconfined_type filesystem_type:{ file } ~entrypoint;
+allow filesystem_unconfined_type filesystem_type:{ dir lnk_file sock_file fifo_file chr_file blk_file } *;

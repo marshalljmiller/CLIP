@@ -109,21 +109,40 @@ interface(`miscfiles_read_generic_certs',`
 
 ########################################
 ## <summary>
-##      mmap generic SSL certificates.
+##	mmap generic SSL certificates.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 ## <rolecap/>
 #
 interface(`miscfiles_map_generic_certs',`
-        gen_require(`
-                type cert_t;
-        ')
+	gen_require(`
+		type cert_t;
+	')
 
-        allow $1 cert_t:file map;
+	allow $1 cert_t:file map;
+')
+
+########################################
+## <summary>
+##	Do not audit attempts to mmap generic SSL certificates.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`miscfiles_dontaudit_map_generic_certs',`
+	gen_require(`
+		type cert_t;
+	')
+
+	dontaudit $1 cert_t:file map;
 ')
 
 ########################################
@@ -142,6 +161,26 @@ interface(`miscfiles_manage_generic_cert_dirs',`
 	')
 
 	manage_dirs_pattern($1, cert_t, cert_t)
+')
+
+########################################
+## <summary>
+##	Allow process to relabel cert_t
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`miscfiles_relabel_generic_cert',`
+	gen_require(`
+		type cert_t;
+	')
+
+	files_search_usr($1)
+	relabel_files_pattern($1, cert_t, cert_t)
+	relabel_dirs_pattern($1, cert_t, cert_t)
 ')
 
 ########################################
@@ -231,43 +270,6 @@ interface(`miscfiles_dontaudit_access_check_cert',`
     dontaudit $1 cert_t:dir audit_access;
 ')
 
-########################################
-## <summary>
-##	Do not audit attempts to getattr cert dirs/files.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain to not audit.
-##	</summary>
-## </param>
-#
-interface(`miscfiles_dontaudit_getattr_cert',`
-	gen_require(`
-		type cert_t;
-	')
-
-	dontaudit $1 cert_t:file getattr;
-    dontaudit $1 cert_t:dir getattr;
-')
-
-########################################
-## <summary>
-##	Do not audit attempts to search cert dirs.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain to not audit.
-##	</summary>
-## </param>
-#
-interface(`miscfiles_dontaudit_search_cert',`
-	gen_require(`
-		type cert_t;
-	')
-
-    dontaudit $1 cert_t:dir { getattr search };
-')
-
 
 ########################################
 ## <summary>
@@ -306,31 +308,13 @@ interface(`miscfiles_read_fonts',`
 
 	allow $1 fonts_t:dir list_dir_perms;
 	read_files_pattern($1, fonts_t, fonts_t)
+	allow $1 fonts_t:file map;
 	read_lnk_files_pattern($1, fonts_t, fonts_t)
 
 	allow $1 fonts_cache_t:dir list_dir_perms;
 	read_files_pattern($1, fonts_cache_t, fonts_cache_t)
 	read_lnk_files_pattern($1, fonts_cache_t, fonts_cache_t)
-')
-
-########################################
-## <summary>
-##	Memory map fonts.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-## <rolecap/>
-#
-interface(`miscfiles_map_fonts',`
-	gen_require(`
-		type fonts_t;
-	')
-
-	miscfiles_read_fonts($1)
-	allow $1 fonts_t:file map;
+    allow $1 fonts_cache_t:file map;
 ')
 
 ########################################
@@ -547,8 +531,9 @@ interface(`miscfiles_read_localization',`
 	files_read_etc_symlinks($1)
 	files_search_usr($1)
 	allow $1 locale_t:dir list_dir_perms;
-	mmap_read_files_pattern($1, locale_t, locale_t)
+	read_files_pattern($1, locale_t, locale_t)
 	read_lnk_files_pattern($1, locale_t, locale_t)
+	allow $1 locale_t:file map;
 ')
 
 ########################################
@@ -825,6 +810,7 @@ interface(`miscfiles_read_public_files',`
 	')
 
 	allow $1 { public_content_t public_content_rw_t }:dir list_dir_perms;
+	allow $1 { public_content_t public_content_rw_t }:file map;
 	read_files_pattern($1, { public_content_t public_content_rw_t }, { public_content_t public_content_rw_t })
 	read_lnk_files_pattern($1, { public_content_t public_content_rw_t }, { public_content_t public_content_rw_t })
 ')
@@ -971,7 +957,7 @@ interface(`miscfiles_etc_filetrans_localization',`
 		type locale_t;
 	')
 
-	files_etc_filetrans($1, locale_t, lnk_file)
+	files_etc_filetrans($1, locale_t, { file lnk_file })
 	files_etc_filetrans($1, locale_t, {lnk_file file}, "localtime" )
 	files_etc_filetrans($1, locale_t, file, "locale.conf" )
 	files_etc_filetrans($1, locale_t, file, "timezone" )
@@ -1049,6 +1035,7 @@ interface(`miscfiles_filetrans_named_content',`
 	files_var_filetrans($1, man_t, dir, "man")
 	files_etc_filetrans($1, cert_t, dir, "pki")
 	files_usr_filetrans($1, cert_t, dir, "certs")
+	files_var_lib_filetrans($1, cert_t, dir, "letsencrypt")
 	files_usr_filetrans($1, fonts_t, dir, "fonts")
 	files_usr_filetrans($1, hwdata_t, dir, "hwdata")
 	files_var_filetrans($1, fonts_cache_t, dir, "fontconfig")
@@ -1056,4 +1043,44 @@ interface(`miscfiles_filetrans_named_content',`
 	files_spool_filetrans($1, tetex_data_t, dir, "texmf")
 	files_var_lib_filetrans($1, tetex_data_t, dir, "texmf")
 	files_var_filetrans($1, public_content_t, dir, "ftp")
+')
+
+
+########################################
+## <summary>
+##	Transition to miscfiles named content
+## </summary>
+## <param name="domain">
+##	<summary>
+##      Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`miscfiles_filetrans_named_content_letsencrypt',`
+	gen_require(`
+		type cert_t;
+	')
+
+	files_var_lib_filetrans($1, cert_t, dir, "letsencrypt")
+')
+
+########################################
+## <summary>
+##	Read all pkcs11 modules configurations.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`miscfiles_read_pkcs11_modules',`
+	gen_require(`
+		type pkcs11_modules_conf_t;
+	')
+
+	allow $1 pkcs11_modules_conf_t:dir list_dir_perms;
+	read_files_pattern($1, pkcs11_modules_conf_t, pkcs11_modules_conf_t)
+	allow $1 pkcs11_modules_conf_t:file map;
 ')

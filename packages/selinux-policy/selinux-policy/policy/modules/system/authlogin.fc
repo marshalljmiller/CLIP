@@ -11,8 +11,8 @@ HOME_DIR/\.google_authenticator~		gen_context(system_u:object_r:auth_home_t,s0)
 /etc/gshadow.*		--	gen_context(system_u:object_r:shadow_t,s0)
 /etc/nshadow.*		--	gen_context(system_u:object_r:shadow_t,s0)
 /etc/shadow.*		--	gen_context(system_u:object_r:shadow_t,s0)
-/etc/security/opasswd	--	gen_context(system_u:object_r:oshadow_t,s0)
-/etc/security/opasswd\.old	--	gen_context(system_u:object_r:oshadow_t,s0)
+/etc/security/opasswd	--	gen_context(system_u:object_r:shadow_t,s0)
+/etc/security/opasswd\.old	--	gen_context(system_u:object_r:shadow_t,s0)
 /etc/passwd\.lock	--	gen_context(system_u:object_r:passwd_file_t,s0)
 /etc/passwd\.adjunct.*	--	gen_context(system_u:object_r:passwd_file_t,s0)
 /etc/\.pwd\.lock	--	gen_context(system_u:object_r:passwd_file_t,s0)
@@ -46,6 +46,8 @@ ifdef(`distro_gentoo', `
 /usr/sbin/utempter	--	gen_context(system_u:object_r:utempter_exec_t,s0)
 /usr/sbin/validate	--	gen_context(system_u:object_r:chkpwd_exec_t,s0)
 
+/usr/libexec/utempter/utempter 	--	gen_context(system_u:object_r:utempter_exec_t,s0)
+
 /var/ace(/.*)?			gen_context(system_u:object_r:var_auth_t,s0)
 
 /var/opt/quest/vas/vasd(/.*)?	gen_context(system_u:object_r:var_auth_t,s0)
@@ -72,7 +74,8 @@ ifdef(`distro_gentoo', `
 
 /var/run/console(/.*)?	 	gen_context(system_u:object_r:pam_var_console_t,s0)
 /var/run/faillock(/.*)?		gen_context(system_u:object_r:faillog_t,s0)
-/var/log/faillock(/.*)?		gen_context(system_u:object_r:faillog_t,s0)
+/var/run/motd		--	gen_context(system_u:object_r:pam_var_run_t,s0)
+/var/run/motd\.d(/.*)?		gen_context(system_u:object_r:pam_var_run_t,s0)
 /var/run/pam_mount(/.*)?	gen_context(system_u:object_r:pam_var_run_t,s0)
 /var/run/pam_ssh(/.*)?		gen_context(system_u:object_r:var_auth_t,s0)
 /var/run/sepermit(/.*)? 	gen_context(system_u:object_r:pam_var_run_t,s0)

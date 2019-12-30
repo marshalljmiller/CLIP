@@ -49,7 +49,7 @@ template(`rhcs_domain_template',`
 	manage_files_pattern($1_t, $1_var_run_t, $1_var_run_t)
 	manage_fifo_files_pattern($1_t, $1_var_run_t, $1_var_run_t)
 	manage_sock_files_pattern($1_t, $1_var_run_t, $1_var_run_t)
-	files_pid_filetrans($1_t, $1_var_run_t, { file sock_file fifo_file })
+	files_pid_filetrans($1_t, $1_var_run_t, { dir file sock_file fifo_file })
 
     kernel_read_system_state($1_t)
 
@@ -250,6 +250,27 @@ interface(`rhcs_stream_connect_fenced',`
 
 	files_search_pids($1)
 	stream_connect_pattern($1, fenced_var_run_t, fenced_var_run_t, fenced_t)
+')
+
+######################################
+## <summary>
+##  Send and receive messages from
+##  fenced over dbus.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rhcs_dbus_chat_fenced',`
+	gen_require(`
+		type fenced_t;
+		class dbus send_msg;
+	')
+
+	allow $1 fenced_t:dbus send_msg;
+	allow fenced_t $1:dbus send_msg;
 ')
 
 ######################################
@@ -780,6 +801,7 @@ interface(`rhcs_rw_cluster_tmpfs',`
 
     rw_files_pattern($1, cluster_tmpfs_t, cluster_tmpfs_t)
     delete_files_pattern($1, cluster_tmpfs_t, cluster_tmpfs_t)
+    allow $1 cluster_tmpfs_t:file map;
 ')
 
 #####################################
@@ -937,4 +959,42 @@ interface(`rhcs_admin_cluster',`
     rhcs_systemctl_cluster($1)
     admin_pattern($1, cluster_unit_file_t)
     allow $1 cluster_unit_file_t:service all_service_perms;
+')
+
+########################################
+## <summary>
+##	Start haproxy unit files domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`rhcs_start_haproxy_services',`
+	gen_require(`
+		type haproxy_unit_file_t;
+	')
+
+	systemd_exec_systemctl($1)
+	allow $1 haproxy_unit_file_t:service {status start};
+')
+
+########################################
+## <summary>
+##	Create log files with a named file
+##	type transition.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`rhcs_named_filetrans_log_dir',`
+	gen_require(`
+		type var_log_t;
+	')
+
+	logging_log_named_filetrans($1, var_log_t, dir, "bundles")
 ')

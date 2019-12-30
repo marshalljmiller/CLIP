@@ -246,6 +246,24 @@ interface(`nagios_domtrans_nrpe',`
 	domtrans_pattern($1, nrpe_exec_t, nrpe_t)
 ')
 
+######################################
+## <summary>
+## Do not audit attempts to write nrpe daemon unnamed pipes.
+## </summary>
+## <param name="domain">
+## <summary>
+## Domain allowed access.
+## </summary>
+## </param>
+#
+interface(`nagios_dontaudit_write_pipes_nrpe',`
+ gen_require(`
+                type nrpe_t;
+        ')
+
+        dontaudit $1 nrpe_t:fifo_file write;
+')
+
 ########################################
 ## <summary>
 ##	All of the rules required to administrate
@@ -297,4 +315,22 @@ interface(`nagios_admin',`
 	admin_pattern($1, nagios_var_run_t)
 
 	admin_pattern($1, nrpe_etc_t)
+')
+
+########################################
+## <summary>
+##      Send a null signal to nagios_unconfined_plugin.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`nagios_unconfined_signull',`
+	gen_require(`
+		type nagios_unconfined_plugin_t;
+	')
+
+	allow $1 nagios_unconfined_plugin_t:process signull;
 ')

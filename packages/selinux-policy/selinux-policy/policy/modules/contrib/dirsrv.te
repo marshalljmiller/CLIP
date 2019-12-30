@@ -50,8 +50,8 @@ files_type(dirsrv_share_t);
 #
 # dirsrv local policy
 #
-allow dirsrv_t self:process { getsched setsched setfscreate signal_perms};
-allow dirsrv_t self:capability { sys_nice setuid setgid fsetid chown dac_override fowner };
+allow dirsrv_t self:process { getsched setsched setfscreate setrlimit signal_perms};
+allow dirsrv_t self:capability { sys_nice setuid setgid fsetid chown dac_read_search dac_override fowner };
 allow dirsrv_t self:fifo_file manage_fifo_file_perms;
 allow dirsrv_t self:sem create_sem_perms;
 allow dirsrv_t self:tcp_socket create_stream_socket_perms;
@@ -60,11 +60,13 @@ manage_dirs_pattern(dirsrv_t, dirsrv_tmpfs_t, dirsrv_tmpfs_t)
 manage_files_pattern(dirsrv_t, dirsrv_tmpfs_t, dirsrv_tmpfs_t)
 manage_lnk_files_pattern(dirsrv_t, dirsrv_tmpfs_t, dirsrv_tmpfs_t)
 fs_tmpfs_filetrans(dirsrv_t, dirsrv_tmpfs_t, { dir file })
+allow dirsrv_t dirsrv_tmpfs_t:file map;
 
 manage_dirs_pattern(dirsrv_t, dirsrv_var_lib_t, dirsrv_var_lib_t)
 manage_files_pattern(dirsrv_t, dirsrv_var_lib_t, dirsrv_var_lib_t)
 manage_sock_files_pattern(dirsrv_t, dirsrv_var_lib_t, dirsrv_var_lib_t)
 files_var_lib_filetrans(dirsrv_t,dirsrv_var_lib_t, { file dir sock_file })
+allow dirsrv_t dirsrv_var_lib_t:file map;
 
 manage_dirs_pattern(dirsrv_t, dirsrv_var_log_t, dirsrv_var_log_t)
 manage_files_pattern(dirsrv_t, dirsrv_var_log_t, dirsrv_var_log_t)
@@ -76,10 +78,11 @@ manage_dirs_pattern(dirsrv_t, dirsrv_var_run_t, dirsrv_var_run_t)
 manage_files_pattern(dirsrv_t, dirsrv_var_run_t, dirsrv_var_run_t)
 manage_sock_files_pattern(dirsrv_t, dirsrv_var_run_t, dirsrv_var_run_t)
 files_pid_filetrans(dirsrv_t, dirsrv_var_run_t, { file dir sock_file })
+allow dirsrv_t dirsrv_var_run_t:file map;
 
 manage_files_pattern(dirsrv_t, dirsrv_var_lock_t, dirsrv_var_lock_t)
 manage_dirs_pattern(dirsrv_t, dirsrv_var_lock_t, dirsrv_var_lock_t)
-files_lock_filetrans(dirsrv_t, dirsrv_var_lock_t, file)
+files_lock_filetrans(dirsrv_t, dirsrv_var_lock_t, { dir file })
 files_setattr_lock_dirs(dirsrv_t)
 
 manage_files_pattern(dirsrv_t, dirsrv_config_t, dirsrv_config_t)
@@ -87,9 +90,14 @@ manage_dirs_pattern(dirsrv_t, dirsrv_config_t, dirsrv_config_t)
 manage_lnk_files_pattern(dirsrv_t, dirsrv_config_t, dirsrv_config_t)
 
 manage_files_pattern(dirsrv_t, dirsrv_tmp_t, dirsrv_tmp_t)
+exec_files_pattern(dirsrv_t, dirsrv_tmp_t, dirsrv_tmp_t)
+manage_lnk_files_pattern(dirsrv_t, dirsrv_tmp_t, dirsrv_tmp_t)
 manage_dirs_pattern(dirsrv_t, dirsrv_tmp_t, dirsrv_tmp_t)
-files_tmp_filetrans(dirsrv_t, dirsrv_tmp_t, { file dir })
+files_tmp_filetrans(dirsrv_t, dirsrv_tmp_t, { file dir lnk_file })
 allow dirsrv_t dirsrv_tmp_t:file relabel_file_perms;
+
+read_files_pattern(dirsrv_t, dirsrv_share_t, dirsrv_share_t)
+list_dirs_pattern(dirsrv_t, dirsrv_share_t, dirsrv_share_t)
 
 kernel_read_network_state(dirsrv_t)
 kernel_read_system_state(dirsrv_t)
@@ -114,14 +122,18 @@ dev_read_sysfs(dirsrv_t)
 dev_read_urand(dirsrv_t)
 
 files_read_usr_symlinks(dirsrv_t)
+files_mmap_usr_files(dirsrv_t)
 
 fs_getattr_all_fs(dirsrv_t)
+fs_read_cgroup_files(dirsrv_t)
 
 auth_use_pam(dirsrv_t)
 
 logging_send_syslog_msg(dirsrv_t)
 
 sysnet_dns_name_resolve(dirsrv_t)
+
+usermanage_read_crack_db(dirsrv_t)
 
 optional_policy(`
 	apache_dontaudit_leaks(dirsrv_t)
@@ -151,11 +163,15 @@ optional_policy(`
     uuidd_stream_connect_manager(dirsrv_t)
 ')
 
+optional_policy(`
+	systemd_manage_passwd_run(dirsrv_t)
+')
+
 ########################################
 #
 # dirsrv-snmp local policy
 #
-allow dirsrv_snmp_t self:capability { dac_override dac_read_search };
+allow dirsrv_snmp_t self:capability {  dac_read_search };
 allow dirsrv_snmp_t self:fifo_file rw_fifo_file_perms;
 
 rw_files_pattern(dirsrv_snmp_t, dirsrv_tmpfs_t, dirsrv_tmpfs_t)
@@ -171,6 +187,8 @@ search_dirs_pattern(dirsrv_snmp_t, dirsrv_var_run_t, dirsrv_var_run_t)
 manage_files_pattern(dirsrv_snmp_t, dirsrv_var_log_t, dirsrv_snmp_var_log_t);
 filetrans_pattern(dirsrv_snmp_t, dirsrv_var_log_t, dirsrv_snmp_var_log_t, file)
 
+kernel_read_system_state(dirsrv_snmp_t)
+
 corenet_tcp_connect_agentx_port(dirsrv_snmp_t)
 
 dev_read_rand(dirsrv_snmp_t)
@@ -183,9 +201,10 @@ domain_use_interactive_fds(dirsrv_snmp_t)
 fs_getattr_tmpfs(dirsrv_snmp_t)
 fs_search_tmpfs(dirsrv_snmp_t)
 
-
 sysnet_read_config(dirsrv_snmp_t)
 sysnet_dns_name_resolve(dirsrv_snmp_t)
+
+userdom_use_inherited_user_ptys(dirsrv_snmp_t)
 
 optional_policy(`
 	snmp_dontaudit_read_snmp_var_lib_files(dirsrv_snmp_t)

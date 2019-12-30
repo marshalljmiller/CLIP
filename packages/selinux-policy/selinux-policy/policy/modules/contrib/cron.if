@@ -95,6 +95,8 @@ interface(`cron_role',`
 	allow $2 crontab_t:process signal_perms;
 	ps_process_pattern($2, crontab_t)
 
+    cron_common_crontab_template($2)
+
 	tunable_policy(`deny_ptrace',`',`
 		allow $2 crontab_t:process ptrace;
 	')
@@ -185,6 +187,8 @@ interface(`cron_unconfined_role',`
 	ps_process_pattern($2, unconfined_cronjob_t)
 	allow $2 unconfined_cronjob_t:process signal_perms;
 
+    cron_common_crontab_template($2)
+
 	tunable_policy(`deny_ptrace',`',`
 		allow $2 unconfined_cronjob_t:process ptrace;
 	')
@@ -263,6 +267,8 @@ interface(`cron_admin_role',`
 	# crontab shows up in user ps
 	ps_process_pattern($2, admin_crontab_t)
 	allow $2 admin_crontab_t:process signal_perms;
+
+    cron_common_crontab_template($2)
 
 	tunable_policy(`deny_ptrace',`',`
 		allow $2 admin_crontab_t:process ptrace;
@@ -713,6 +719,25 @@ interface(`cron_manage_pid_files',`
 
 ########################################
 ## <summary>
+##	Read pid files used by cron
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`cron_read_pid_files',`
+	gen_require(`
+		type crond_var_run_t;
+	')
+
+	files_search_pids($1)
+	read_files_pattern($1, crond_var_run_t, crond_var_run_t)
+')
+
+########################################
+## <summary>
 ##	Execute anacron in the cron system domain.
 ## </summary>
 ## <param name="domain">
@@ -866,6 +891,25 @@ interface(`cron_dontaudit_write_system_job_tmp_files',`
 
 ########################################
 ## <summary>
+##	Send to system_cronjob over a unix domain
+##	datagram socket.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`cron_dgram_send',`
+	gen_require(`
+		type system_cronjob_t;
+	')
+
+	allow $1 system_cronjob_t:unix_dgram_socket sendto;
+')
+
+########################################
+## <summary>
 ##	Read temporary files from the system cron jobs.
 ## </summary>
 ## <param name="domain">
@@ -950,4 +994,51 @@ interface(`cron_generic_log_filetrans_log',`
     ')
 
     logging_log_filetrans($1, cron_log_t, $2, $3)
+')
+
+#######################################
+## <summary>
+##  Create specified objects in generic
+##  log directories with the cron log file type.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+## <param name="object_class">
+##  <summary>
+##  Class of the object being created.
+##  </summary>
+## </param>
+## <param name="name" optional="true">
+##  <summary>
+##  The name of the object being created.
+##  </summary>
+## </param>
+#
+interface(`cron_generic_log_filetrans_log_insights',`
+    gen_require(`
+        type var_log_t;
+    ')
+
+    logging_log_filetrans($1, var_log_t, file, "redhat-access-insights.log")
+')
+
+########################################
+## <summary>
+##	Allow system_cron_spool_t to be an entrypoint of this domain
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`cron_system_spool_entrypoint',`
+	gen_require(`
+		attribute system_cron_spool_t;
+	')
+	allow $1 system_cron_spool_t:file entrypoint;
 ')

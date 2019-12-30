@@ -8,6 +8,7 @@ policy_module(fstools, 1.16.1)
 type fsadm_t;
 type fsadm_exec_t;
 init_system_domain(fsadm_t, fsadm_exec_t)
+init_nnp_daemon_domain(fsadm_t)
 role system_r types fsadm_t;
 
 type fsadm_log_t;
@@ -31,9 +32,9 @@ files_type(swapfile_t)
 #
 
 # ipc_lock is for losetup
-allow fsadm_t self:capability { ipc_lock sys_rawio sys_admin sys_resource sys_tty_config dac_override dac_read_search };
+allow fsadm_t self:capability { ipc_lock sys_rawio sys_admin sys_resource sys_tty_config  dac_read_search };
 dontaudit fsadm_t self:capability net_admin;
-allow fsadm_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execmem execheap };
+allow fsadm_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execmem execheap execstack };
 allow fsadm_t self:fd use;
 allow fsadm_t self:fifo_file rw_fifo_file_perms;
 allow fsadm_t self:sock_file read_sock_file_perms;
@@ -129,7 +130,6 @@ files_etc_filetrans_etc_runtime(fsadm_t, file)
 files_rw_isid_type_dirs(fsadm_t)
 files_rw_isid_type_blk_files(fsadm_t)
 files_read_isid_type_files(fsadm_t)
-files_list_var(fsadm_t)
 
 fs_search_auto_mountpoints(fsadm_t)
 fs_getattr_xattr_fs(fsadm_t)
@@ -174,10 +174,11 @@ logging_send_syslog_msg(fsadm_t)
 logging_send_audit_msgs(fsadm_t)
 logging_stream_connect_syslog(fsadm_t)
 
-
 seutil_read_config(fsadm_t)
 
 term_use_all_inherited_terms(fsadm_t)
+
+userdom_rw_inherited_user_tmp_pipes(fsadm_t)
 
 ifdef(`distro_redhat',`
 	optional_policy(`
@@ -202,6 +203,10 @@ optional_policy(`
 
 optional_policy(`
 	hal_dontaudit_write_log(fsadm_t)
+')
+
+optional_policy(`
+    kdump_rw_inherited_kdumpctl_tmp_pipes(fsadm_t)
 ')
 
 optional_policy(`

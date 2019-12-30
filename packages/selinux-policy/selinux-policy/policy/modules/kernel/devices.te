@@ -79,6 +79,9 @@ dev_node(dlm_control_device_t)
 type dri_device_t;
 dev_node(dri_device_t)
 
+type hsa_device_t;
+dev_node(hsa_device_t)
+
 type event_device_t;
 dev_node(event_device_t)
 
@@ -87,6 +90,27 @@ dev_node(event_device_t)
 #
 type framebuf_device_t;
 dev_node(framebuf_device_t)
+
+#
+# Type for hyperv devices
+#
+type hypervkvp_device_t;
+dev_node(hypervkvp_device_t)
+
+type hypervvssd_device_t;
+dev_node(hypervvssd_device_t)
+
+#
+# Type for /dev/ss0
+#
+type gpfs_device_t;
+dev_node(gpfs_device_t)
+
+#
+# Type for /dev/gpiochip*
+#
+type gpio_device_t;
+dev_node(gpio_device_t)
 
 #
 # Type for /dev/ipmi/0
@@ -99,6 +123,12 @@ dev_node(ipmi_device_t)
 #
 type infiniband_device_t;
 dev_node(infiniband_device_t)
+
+#
+# Type for /dev/infiniband mgmt devices
+#
+type infiniband_mgmt_device_t;
+dev_node(infiniband_mgmt_device_t)
 
 #
 # Type for /dev/kmsg
@@ -119,6 +149,13 @@ dev_node(ksm_device_t)
 type kvm_device_t;
 dev_node(kvm_device_t)
 mls_trusted_object(kvm_device_t)
+
+#
+# sev_device_t is the type of
+# /dev/sev
+#
+type sev_device_t;
+dev_node(sev_device_t)
 
 #
 # Type for /dev/lirc
@@ -173,10 +210,17 @@ type mouse_device_t;
 dev_node(mouse_device_t)
 
 #
+# Type for /dev/mptctl used to check RAID status.
+#
+type mptctl_device_t;
+dev_node(mptctl_device_t)
+
+#
 # Type for /dev/cpu/mtrr and /proc/mtrr
 #
 type mtrr_device_t;
 dev_node(mtrr_device_t)
+files_mountpoint(mtrr_device_t)
 genfscon proc /mtrr gen_context(system_u:object_r:mtrr_device_t,s0)
 
 #
@@ -204,6 +248,13 @@ dev_node(nvram_device_t)
 #
 type nvme_device_t;
 dev_node(nvme_device_t)
+
+#
+# Type for /dev/op_panel
+# Type for /dev/opal-prd
+#
+type opal_device_t;
+dev_node(opal_device_t)
 
 #
 # Type for /dev/pmu
@@ -305,6 +356,12 @@ dev_node(vfio_device_t)
 type v4l_device_t;
 dev_node(v4l_device_t)
 
+type vsock_device_t;
+dev_node(vsock_device_t)
+
+type vmci_device_t;
+dev_node(vmci_device_t)
+
 #
 # vhost_device_t is the type for /dev/vhost-net
 #
@@ -359,3 +416,5 @@ allow devices_unconfined_type self:capability sys_rawio;
 allow devices_unconfined_type device_node:{ blk_file lnk_file } *;
 allow devices_unconfined_type device_node:{ file chr_file } ~{ execmod entrypoint };
 allow devices_unconfined_type mtrr_device_t:file ~{ execmod entrypoint };
+dev_getattr_all(devices_unconfined_type)
+

@@ -53,6 +53,13 @@ gen_tunable(httpd_manage_ipa, false)
 
 ## <desc>
 ## <p>
+## Allow httpd processes to run IPA helper.
+## </p>
+## </desc>
+gen_tunable(httpd_run_ipa, false)
+
+## <desc>
+## <p>
 ## Allow httpd to use built in scripting (usually php)
 ## </p>
 ## </desc>
@@ -324,8 +331,6 @@ ifdef(`distro_redhat',`
 init_daemon_domain(httpd_t, httpd_exec_t)
 role system_r types httpd_t;
 
-systemd_notify_write_socket(httpd_t)
-
 # httpd_cache_t is the type given to the /var/cache/httpd
 # directory and the files under that directory
 type httpd_cache_t;
@@ -413,18 +418,13 @@ files_tmp_file(httpd_tmp_t)
 type httpd_tmpfs_t;
 files_tmpfs_file(httpd_tmpfs_t)
 
-apache_content_template(httpd_user)
+apache_user_content_template(httpd_user)
 ubac_constrained(httpd_user_script_t)
 
 typeattribute httpd_user_content_t httpdcontent;
 typeattribute httpd_user_rw_content_t httpdcontent;
 typeattribute httpd_user_ra_content_t httpdcontent;
 
-userdom_user_home_content(httpd_user_content_t)
-userdom_user_home_content(httpd_user_htaccess_t)
-userdom_user_home_content(httpd_user_script_exec_t)
-userdom_user_home_content(httpd_user_ra_content_t)
-userdom_user_home_content(httpd_user_rw_content_t)
 typeattribute httpd_user_script_t httpd_script_domains;
 typealias httpd_user_content_t alias { httpd_staff_content_t httpd_sysadm_content_t };
 typealias httpd_user_content_t alias httpd_unconfined_content_t;
@@ -451,6 +451,7 @@ ifdef(`distro_redhat',`
 	typealias httpd_var_run_t alias phpfpm_var_run_t;
 ')
 files_pid_file(httpd_var_run_t)
+files_mountpoint(httpd_var_run_t)
 
 # Removal of fastcgi, will cause problems without the following
 typealias httpd_var_run_t alias httpd_fastcgi_var_run_t;
@@ -474,7 +475,7 @@ role system_r types httpd_passwd_t;
 # Apache server local policy
 #
 
-allow httpd_t self:capability { chown dac_override kill setgid setuid sys_nice sys_tty_config sys_chroot };
+allow httpd_t self:capability { chown dac_read_search dac_override kill setgid setuid sys_nice sys_tty_config sys_chroot };
 dontaudit httpd_t self:capability { net_admin sys_tty_config };
 allow httpd_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 allow httpd_t self:fd use;
@@ -489,8 +490,7 @@ allow httpd_t self:unix_stream_socket { create_stream_socket_perms connectto };
 allow httpd_t self:tcp_socket create_stream_socket_perms;
 allow httpd_t self:udp_socket create_socket_perms;
 dontaudit httpd_t self:netlink_audit_socket create_socket_perms;
-# needed to getifaddr on IPV6?
-allow httpd_t self:netlink_route_socket { bind create getattr read write nlmsg_read setopt };
+dontaudit httpd_t self:netlink_kobject_uevent_socket create_socket_perms;
 
 # Allow httpd_t to put files in /var/cache/httpd etc
 manage_dirs_pattern(httpd_t, httpd_cache_t, httpd_cache_t)
@@ -518,6 +518,7 @@ create_files_pattern(httpd_t, httpd_log_t, httpd_log_t)
 append_files_pattern(httpd_t, httpd_log_t, httpd_log_t)
 setattr_files_pattern(httpd_t, httpd_log_t, httpd_log_t)
 read_files_pattern(httpd_t, httpd_log_t, httpd_log_t)
+list_dirs_pattern(httpd_t, httpd_log_t, httpd_log_t)
 read_lnk_files_pattern(httpd_t, httpd_log_t, httpd_log_t)
 # cjp: need to refine create interfaces to
 # cut this back to add_name only
@@ -538,7 +539,7 @@ manage_lnk_files_pattern(httpd_t, httpd_squirrelmail_t, httpd_squirrelmail_t)
 allow httpd_t httpd_squirrelmail_t:file map;
 
 allow httpd_t httpd_suexec_t:process { signal signull };
-allow httpd_t httpd_suexec_exec_t:file read_file_perms;
+allow httpd_t httpd_suexec_t:file read_file_perms;
 
 allow httpd_t httpd_sys_content_t:dir list_dir_perms;
 read_files_pattern(httpd_t, httpd_sys_content_t, httpd_sys_content_t)
@@ -565,6 +566,7 @@ allow httpd_t httpd_tmpfs_t:file map;
 
 manage_dirs_pattern(httpd_t, httpd_var_lib_t, httpd_var_lib_t)
 manage_files_pattern(httpd_t, httpd_var_lib_t, httpd_var_lib_t)
+manage_lnk_files_pattern(httpd_t, httpd_var_lib_t, httpd_var_lib_t)
 files_var_lib_filetrans(httpd_t, httpd_var_lib_t, { dir file })
 
 setattr_dirs_pattern(httpd_t, httpd_var_run_t, httpd_var_run_t)
@@ -609,16 +611,21 @@ dev_read_sysfs(httpd_t)
 dev_read_rand(httpd_t)
 dev_read_urand(httpd_t)
 dev_rw_crypto(httpd_t)
+dev_rw_zero(httpd_t)
+
+files_dontaudit_write_all_mountpoints(httpd_t)
 
 fs_getattr_all_fs(httpd_t)
 fs_search_auto_mountpoints(httpd_t)
 fs_read_iso9660_files(httpd_t)
 fs_rw_anon_inodefs_files(httpd_t)
-fs_read_hugetlbfs_files(httpd_t)
+fs_rw_hugetlbfs_files(httpd_t)
+fs_exec_hugetlbfs_files(httpd_t)
+fs_list_inotifyfs(httpd_t)
 
 auth_use_nsswitch(httpd_t)
 
-#application_exec_all(httpd_t)
+application_exec_all(httpd_t)
 
 # execute perl
 corecmd_exec_bin(httpd_t)
@@ -655,8 +662,6 @@ files_tmp_filetrans(httpd_sys_script_t, httpd_sys_rw_content_t, { dir file lnk_f
 
 libs_read_lib_files(httpd_t)
 
-sysnet_read_config(httpd_t)
-
 ifdef(`hide_broken_symptoms',`
 	libs_exec_lib_files(httpd_t)
 ')
@@ -667,12 +672,14 @@ init_dontaudit_read_utmp(httpd_t)
 
 miscfiles_read_fonts(httpd_t)
 miscfiles_read_public_files(httpd_t)
-miscfiles_map_generic_certs(httpd_t)
 miscfiles_read_generic_certs(httpd_t)
+miscfiles_map_generic_certs(httpd_t)
 miscfiles_read_tetex_data(httpd_t)
 miscfiles_dontaudit_access_check_cert(httpd_t)
 
 userdom_use_unpriv_users_fds(httpd_t)
+userdom_rw_inherited_user_tmp_files(httpd_t)
+userdom_map_tmp_files(httpd_t)
 
 tunable_policy(`httpd_setrlimit',`
 	allow httpd_t self:process setrlimit;
@@ -708,6 +715,7 @@ tunable_policy(`httpd_can_network_connect',`
 tunable_policy(`httpd_can_network_connect_db',`
 	corenet_tcp_connect_gds_db_port(httpd_t)
 	corenet_tcp_connect_mssql_port(httpd_t)
+	corenet_tcp_connect_mongod_port(httpd_t)
 	corenet_sendrecv_mssql_client_packets(httpd_t)
 	corenet_tcp_connect_oracle_port(httpd_t)
 	corenet_sendrecv_oracle_client_packets(httpd_t)
@@ -807,7 +815,6 @@ tunable_policy(`httpd_enable_homedirs && use_nfs_home_dirs',`
 	fs_list_auto_mountpoints(httpd_t)
 	fs_read_nfs_files(httpd_t)
 	fs_read_nfs_symlinks(httpd_t)
-	    allow httpd_t httpd_user_content_type:file map;
 ')
 
 tunable_policy(`httpd_use_nfs',`
@@ -835,14 +842,19 @@ tunable_policy(`httpd_can_sendmail',`
 	corenet_sendrecv_smtp_client_packets(httpd_t)
 	corenet_tcp_connect_pop_port(httpd_t)
 	corenet_sendrecv_pop_client_packets(httpd_t)
-	mta_send_mail(httpd_t)
-	mta_signal_system_mail(httpd_t)
 ')
 
 optional_policy(`
-	tunable_policy(`httpd_can_sendmail',`
-		postfix_rw_spool_maildrop_files(httpd_t)
-	')
+    tunable_policy(`httpd_can_sendmail',`
+	    mta_send_mail(httpd_t)
+	    mta_signal_system_mail(httpd_t)
+    ')
+')
+
+optional_policy(`
+    tunable_policy(`httpd_can_sendmail',`
+    postfix_rw_spool_maildrop_files(httpd_t)
+    ')
 ')
 
 tunable_policy(`httpd_use_cifs',`
@@ -909,6 +921,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    bind_read_cache(httpd_t)
+')
+
+optional_policy(`
 	calamaris_read_www_files(httpd_t)
 ')
 
@@ -952,14 +968,14 @@ optional_policy(`
 		avahi_dbus_chat(httpd_t)
 	')
 
-    tunable_policy(`httpd_dbus_sssd',
+    tunable_policy(`httpd_dbus_sssd',`
         sssd_dbus_chat(httpd_t)
     ')
 ')
 
-#optional_policy(`
-#	git_read_generic_sys_content_files(httpd_t)
-#')
+optional_policy(`
+	git_read_generic_sys_content_files(httpd_t)
+')
 
 optional_policy(`
 	gitosis_read_lib_files(httpd_t)
@@ -976,7 +992,8 @@ optional_policy(`
 ')
 
 optional_policy(`
-    ipa_search_lib(httpd_t)
+    ipa_read_lib(httpd_t)
+    ipa_manage_pid_files(httpd_t)
 ')
 
 optional_policy(`
@@ -993,6 +1010,7 @@ optional_policy(`
 optional_policy(`
     kerberos_manage_host_rcache(httpd_t)
     kerberos_read_keytab(httpd_t)
+    kerberos_read_kdc_config(httpd_t)
     kerberos_tmp_filetrans_host_rcache(httpd_t, "HTTP_23")
     kerberos_tmp_filetrans_host_rcache(httpd_t, "HTTP_48")
     kerberos_use(httpd_t)
@@ -1024,6 +1042,20 @@ optional_policy(`
 	tunable_policy(`httpd_manage_ipa',`
 		memcached_manage_pid_files(httpd_t)
 	')
+')
+
+optional_policy(`
+    tunable_policy(`httpd_run_ipa',`
+        oddjob_dbus_chat(httpd_t)
+    ')
+')
+
+optional_policy(`
+    tunable_policy(`httpd_run_ipa',`
+        ipa_domtrans_helper(httpd_t)
+    ')
+    ipa_cert_filetrans_named_content(httpd_t)
+    allow httpd_t httpd_config_t:dir write;
 ')
 
 optional_policy(`
@@ -1075,6 +1107,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+        pkcs11proxyd_stream_connect(httpd_t)
+')
+
+optional_policy(`
 	pki_apache_domain_signal(httpd_t)
 	pki_manage_apache_config_files(httpd_t)
 	pki_manage_apache_lib(httpd_t)
@@ -1089,6 +1125,10 @@ optional_policy(`
 
 optional_policy(`
 	pwauth_domtrans(httpd_t)
+')
+
+optional_policy(`
+    realmd_read_var_lib(httpd_t)
 ')
 
 optional_policy(`
@@ -1120,8 +1160,7 @@ optional_policy(`
 
 optional_policy(`
 	files_dontaudit_rw_usr_dirs(httpd_t)
-	snmp_dontaudit_read_snmp_var_lib_files(httpd_t)
-	snmp_dontaudit_write_snmp_var_lib_files(httpd_t)
+    snmp_dontaudit_manage_snmp_var_lib_files(httpd_t)
 ')
 
 optional_policy(`
@@ -1147,6 +1186,8 @@ optional_policy(`
     zoneminder_manage_lib_dirs(httpd_t)
     zoneminder_manage_lib_files(httpd_t)
     zoneminder_stream_connect(httpd_t)
+    zoneminder_manage_lib_sock_files(httpd_t)
+    zoneminder_manage_lib_sock_files(httpd_t)
     zoneminder_exec(httpd_t)
 ')
 
@@ -1360,7 +1401,7 @@ tunable_policy(`httpd_can_sendmail',`
 ')
 
 tunable_policy(`httpd_enable_cgi && httpd_unified',`
-	allow httpd_sys_script_t httpdcontent:file entrypoint;
+	allow httpd_sys_script_t httpdcontent:file { entrypoint map };
 	domtrans_pattern(httpd_suexec_t, httpdcontent, httpd_sys_script_t)
 	manage_dirs_pattern(httpd_sys_script_t, httpdcontent, httpdcontent)
 	manage_files_pattern(httpd_sys_script_t, httpdcontent, httpdcontent)
@@ -1382,14 +1423,15 @@ tunable_policy(`httpd_enable_homedirs && use_samba_home_dirs',`
 ')
 
 optional_policy(`
+    	apache_rw_stream_sockets(httpd_suexec_t)
+')
+
+optional_policy(`
 	mailman_domtrans_cgi(httpd_suexec_t)
 ')
 
 optional_policy(`
 	mta_stub(httpd_suexec_t)
-
-	# apache should set close-on-exec
-	dontaudit httpd_suexec_t httpd_t:unix_stream_socket { read write };
 ')
 
 optional_policy(`
@@ -1437,6 +1479,7 @@ files_read_var_symlinks(httpd_sys_script_t)
 files_search_var_lib(httpd_sys_script_t)
 files_search_spool(httpd_sys_script_t)
 
+logging_send_syslog_msg(httpd_sys_script_t)
 logging_inherit_append_all_logs(httpd_sys_script_t)
 
 # Should we add a boolean?
@@ -1464,6 +1507,7 @@ tunable_policy(`httpd_can_network_connect_db',`
 	corenet_sendrecv_mssql_client_packets(httpd_sys_script_t)
 	corenet_tcp_connect_oracle_port(httpd_sys_script_t)
 	corenet_sendrecv_oracle_client_packets(httpd_sys_script_t)
+	corenet_tcp_connect_mongod_port(httpd_sys_script_t)
 ')
 
 fs_cifs_entry_type(httpd_sys_script_t)
@@ -1504,14 +1548,7 @@ tunable_policy(`httpd_enable_cgi && httpd_can_network_connect',`
 ')
 
 tunable_policy(`httpd_enable_homedirs',`
-        userdom_search_user_home_content(httpd_t)
-        userdom_search_user_home_content(httpd_suexec_t)
-        userdom_search_user_home_content(httpd_user_script_t)
-
-        read_files_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
-        read_lnk_files_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
-        list_dirs_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
-    allow httpd_t httpd_user_content_type:file map;
+	userdom_search_user_home_dirs(httpd_sys_script_t)
 ')
 
 tunable_policy(`httpd_enable_homedirs && use_nfs_home_dirs',`
@@ -1577,12 +1614,16 @@ optional_policy(`
     snmp_read_snmp_var_lib_files(httpd_sys_script_t)
 ')
 
+optional_policy(`
+    systemd_dontaudit_read_unit_files(httpd_sys_script_t)
+')
+
 ########################################
 #
 # httpd_rotatelogs local policy
 #
 
-allow httpd_rotatelogs_t self:capability dac_override;
+allow httpd_rotatelogs_t self:capability { dac_read_search  };
 
 manage_files_pattern(httpd_rotatelogs_t, httpd_log_t, httpd_log_t)
 
@@ -1590,6 +1631,7 @@ kernel_read_kernel_sysctls(httpd_rotatelogs_t)
 kernel_dontaudit_list_proc(httpd_rotatelogs_t)
 kernel_dontaudit_read_proc_symlinks(httpd_rotatelogs_t)
 
+corecmd_exec_bin(httpd_rotatelogs_t)
 
 logging_search_logs(httpd_rotatelogs_t)
 
@@ -1631,12 +1673,20 @@ tunable_policy(`httpd_enable_homedirs',`
 	userdom_search_user_home_content(httpd_t)
 	userdom_search_user_home_content(httpd_suexec_t)
 	userdom_search_user_home_content(httpd_user_script_t)
+
+	read_files_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
+	read_lnk_files_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
+	list_dirs_pattern(httpd_t, httpd_user_content_type, httpd_user_content_type)
+    allow httpd_t httpd_user_content_type:file map;
 ')
 
 tunable_policy(`httpd_read_user_content',`
 	userdom_read_user_home_content_files(httpd_t)
 	userdom_read_user_home_content_files(httpd_suexec_t)
 	userdom_read_user_home_content_files(httpd_user_script_t)
+	userdom_mmap_user_home_content_files(httpd_t)
+	userdom_mmap_user_home_content_files(httpd_suexec_t)
+	userdom_mmap_user_home_content_files(httpd_user_script_t)
 ')
 
 ########################################
@@ -1657,8 +1707,9 @@ dev_read_urand(httpd_passwd_t)
 
 domain_use_interactive_fds(httpd_passwd_t)
 
-
 auth_use_nsswitch(httpd_passwd_t)
+
+init_dontaudit_read_state(httpd_passwd_t)
 
 miscfiles_read_certs(httpd_passwd_t)
 
@@ -1726,10 +1777,8 @@ libs_read_lib_files(httpd_script_type)
 
 allow httpd_script_type httpd_sys_content_t:dir search_dir_perms;
 
-optional_policy(`
-	tunable_policy(`httpd_enable_cgi && nis_enabled',`
-		nis_use_ypbind_uncond(httpd_script_type)
-	')
+tunable_policy(`httpd_enable_cgi && nis_enabled',`
+	nis_use_ypbind_uncond(httpd_script_type)
 ')
 
 optional_policy(`
@@ -1757,4 +1806,12 @@ tunable_policy(`httpd_use_openstack',`
 
 tunable_policy(`httpd_use_openstack',`
     corenet_tcp_connect_osapi_compute_port(httpd_t)
+    corenet_tcp_bind_commplex_main_port(httpd_t)
 ')
+
+optional_policy(`
+    tunable_policy(`httpd_use_openstack',`
+        keystone_read_log(httpd_t)
+    ')
+')
+

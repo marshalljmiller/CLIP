@@ -63,7 +63,7 @@ condor_domain_template(startd)
 # Global local policy
 #
 
-allow condor_domain self:capability dac_override;
+allow condor_domain self:capability { dac_read_search  };
 allow condor_domain self:capability2 block_suspend;
 
 allow condor_domain self:process signal_perms;
@@ -99,8 +99,10 @@ allow condor_domain condor_master_t:process signull;
 allow condor_domain condor_master_t:tcp_socket getattr;
 allow condor_domain condor_master_t:udp_socket { read write };
 
-kernel_read_kernel_sysctls(condor_domain)
 kernel_read_network_state(condor_domain)
+kernel_rw_kernel_sysctl(condor_domain)
+kernel_search_network_sysctl(condor_domain)
+kernel_read_vm_sysctls(condor_domain)
 
 corecmd_exec_bin(condor_domain)
 corecmd_exec_shell(condor_domain)
@@ -139,7 +141,7 @@ optional_policy(`
 # Master local policy
 #
 
-allow condor_master_t self:capability { setuid setgid sys_ptrace };
+allow condor_master_t self:capability { chown setuid setgid sys_ptrace net_admin };
 
 allow condor_master_t condor_domain:process { sigkill signal };
 
@@ -150,6 +152,8 @@ files_tmp_filetrans(condor_master_t, condor_master_tmp_t, { file dir })
 can_exec(condor_master_t, condor_master_exec_t)
 
 kernel_read_system_state(condor_master_t)
+kernel_read_fs_sysctls(condor_master_t)
+kernel_rw_net_sysctls(condor_master_t)
 
 corenet_udp_sendrecv_generic_if(condor_master_t)
 corenet_udp_sendrecv_generic_node(condor_master_t)
@@ -207,7 +211,8 @@ corenet_tcp_connect_all_ephemeral_ports(condor_negotiator_t)
 # Procd local policy
 #
 
-allow condor_procd_t self:capability { fowner chown kill dac_override sys_ptrace };
+allow condor_procd_t self:capability { fowner chown kill dac_read_search  sys_ptrace };
+allow condor_procd_t self:cap_userns { sys_ptrace };
 
 allow condor_procd_t condor_domain:process sigkill;
 
@@ -218,7 +223,7 @@ domain_read_all_domains_state(condor_procd_t)
 # Schedd local policy
 #
 
-allow condor_schedd_t self:capability { setuid chown setgid dac_override };
+allow condor_schedd_t self:capability { setuid chown setgid dac_read_search  };
 
 allow condor_schedd_t condor_master_t:tcp_socket rw_stream_socket_perms;
 allow condor_schedd_t condor_master_t:udp_socket getattr;
@@ -237,12 +242,17 @@ files_tmp_filetrans(condor_schedd_t, condor_schedd_tmp_t, { file dir })
 
 corenet_tcp_connect_all_ephemeral_ports(condor_schedd_t)
 
+optional_policy(`
+	mta_send_mail(condor_schedd_t)
+	mta_read_config(condor_schedd_t)
+')
+
 #####################################
 #
 # Startd local policy
 #
 
-allow condor_startd_t self:capability { setuid net_admin setgid dac_override };
+allow condor_startd_t self:capability { setuid net_admin setgid dac_read_search  };
 allow condor_startd_t self:process execmem;
 
 manage_dirs_pattern(condor_startd_t, condor_startd_tmp_t, condor_startd_tmp_t)

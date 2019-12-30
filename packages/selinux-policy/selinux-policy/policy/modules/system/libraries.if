@@ -248,6 +248,24 @@ interface(`libs_dontaudit_setattr_lib_files',`
 
 ########################################
 ## <summary>
+##	dontaudit attempts to setattr on library dirs
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`libs_dontaudit_setattr_lib_dirs',`
+	gen_require(`
+		type lib_t;
+	')
+
+	dontaudit $1 lib_t:dir setattr;
+')
+
+########################################
+## <summary>
 ##	Do not audit attempts to write to library directories.
 ## </summary>
 ## <desc>
@@ -465,7 +483,7 @@ interface(`libs_use_shared_libs',`
 	files_search_usr($1)
 	allow $1 { textrel_shlib_t lib_t }:dir list_dir_perms;
 	read_lnk_files_pattern($1, { textrel_shlib_t lib_t }, { lib_t textrel_shlib_t })
-	mmap_files_pattern($1, { textrel_shlib_t lib_t }, { lib_t textrel_shlib_t })
+	mmap_exec_files_pattern($1, { textrel_shlib_t lib_t }, { lib_t textrel_shlib_t })
 #	allow $1 lib_t:file execmod;
 	allow $1 textrel_shlib_t:file execmod;
 ')

@@ -36,6 +36,7 @@ allow lldpad_t self:udp_socket create_socket_perms;
 
 manage_files_pattern(lldpad_t, lldpad_tmpfs_t, lldpad_tmpfs_t)
 fs_tmpfs_filetrans(lldpad_t, lldpad_tmpfs_t, file)
+allow lldpad_t lldpad_tmpfs_t:file map;
 
 manage_dirs_pattern(lldpad_t, lldpad_var_lib_t, lldpad_var_lib_t)
 manage_files_pattern(lldpad_t, lldpad_var_lib_t, lldpad_var_lib_t)
@@ -51,6 +52,8 @@ kernel_request_load_module(lldpad_t)
 
 dev_read_sysfs(lldpad_t)
 
+fs_getattr_tmpfs(lldpad_t)
+
 logging_send_syslog_msg(lldpad_t)
 
 userdom_dgram_send(lldpad_t)
@@ -61,4 +64,8 @@ optional_policy(`
 
 optional_policy(`
     networkmanager_dgram_send(lldpad_t)
+')
+
+optional_policy(`
+    virt_dgram_send(lldpad_t)
 ')

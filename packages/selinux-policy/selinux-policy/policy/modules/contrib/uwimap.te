@@ -20,7 +20,7 @@ files_pid_file(imapd_var_run_t)
 # Local policy
 #
 
-allow imapd_t self:capability { dac_override setgid setuid sys_resource };
+allow imapd_t self:capability { dac_read_search   setgid setuid sys_resource };
 dontaudit imapd_t self:capability sys_tty_config;
 allow imapd_t self:process signal_perms;
 allow imapd_t self:fifo_file rw_fifo_file_perms;
@@ -84,9 +84,7 @@ optional_policy(`
 
 optional_policy(`
 	mta_manage_spool(imapd_t)
-	mta_manage_mail_home_rw_content(imapd_t)
-	mta_home_filetrans_mail_home_rw(imapd_t, dir, "Maildir")
-	mta_home_filetrans_mail_home_rw(imapd_t, dir, ".maildir")
+	mta_manage_home_rw(imapd_t)
 ')
 
 optional_policy(`

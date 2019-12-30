@@ -42,9 +42,16 @@ interface(`virt_stub_svirt_sandbox_domain',`
 ##	</summary>
 ## </param>
 #
+interface(`virt_stub_container_image',`
+	gen_require(`
+		type container_file_t;
+	')
+')
+
 interface(`virt_stub_svirt_sandbox_file',`
 	gen_require(`
 		type container_file_t;
+		type container_ro_file_t;
 	')
 ')
 
@@ -901,15 +908,15 @@ interface(`virt_ptrace',`
 #
 interface(`virt_exec_sandbox_files',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	can_exec($1, container_file_t)
+	can_exec($1, svirt_file_type)
 ')
 
 ########################################
 ## <summary>
-##	Allow any container_file_t to be an entrypoint of this domain
+##	Allow any svirt_file_type to be an entrypoint of this domain
 ## </summary>
 ## <param name="domain">
 ##	<summary>
@@ -920,9 +927,27 @@ interface(`virt_exec_sandbox_files',`
 #
 interface(`virt_sandbox_entrypoint',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
-	allow $1 container_file_t:file entrypoint;
+	allow $1 svirt_file_type:file entrypoint;
+')
+
+#######################################
+## <summary>
+##	List Sandbox Dirs
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`virt_list_sandbox_dirs',`
+	gen_require(`
+		type svirt_sandbox_file_t;
+	')
+
+	list_dirs_pattern($1, svirt_sandbox_file_t, svirt_sandbox_file_t)
 ')
 
 #######################################
@@ -937,12 +962,12 @@ interface(`virt_sandbox_entrypoint',`
 #
 interface(`virt_read_sandbox_files',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	list_dirs_pattern($1, container_file_t, container_file_t)
-	read_files_pattern($1, container_file_t, container_file_t)
-	read_lnk_files_pattern($1, container_file_t, container_file_t)
+	list_dirs_pattern($1, svirt_file_type, svirt_file_type)
+	read_files_pattern($1, svirt_file_type, svirt_file_type)
+	read_lnk_files_pattern($1, svirt_file_type, svirt_file_type)
 ')
 
 #######################################
@@ -957,15 +982,15 @@ interface(`virt_read_sandbox_files',`
 #
 interface(`virt_manage_sandbox_files',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	manage_dirs_pattern($1, container_file_t, container_file_t)
-	manage_files_pattern($1, container_file_t, container_file_t)
-	manage_fifo_files_pattern($1, container_file_t, container_file_t)
-	manage_chr_files_pattern($1, container_file_t, container_file_t)
-	manage_lnk_files_pattern($1, container_file_t, container_file_t)
-	allow $1 container_file_t:dir_file_class_set { relabelfrom relabelto };
+	manage_dirs_pattern($1, svirt_file_type, svirt_file_type)
+	manage_files_pattern($1, svirt_file_type, svirt_file_type)
+	manage_fifo_files_pattern($1, svirt_file_type, svirt_file_type)
+	manage_chr_files_pattern($1, svirt_file_type, svirt_file_type)
+	manage_lnk_files_pattern($1, svirt_file_type, svirt_file_type)
+	allow $1 svirt_file_type:dir_file_class_set { relabelfrom relabelto };
 ')
 
 #######################################
@@ -980,10 +1005,10 @@ interface(`virt_manage_sandbox_files',`
 #
 interface(`virt_getattr_sandbox_filesystem',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	allow $1 container_file_t:filesystem getattr;
+	allow $1 svirt_file_type:filesystem getattr;
 ')
 
 #######################################
@@ -998,10 +1023,10 @@ interface(`virt_getattr_sandbox_filesystem',`
 #
 interface(`virt_relabel_sandbox_filesystem',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	allow $1 container_file_t:filesystem { relabelfrom relabelto };
+	allow $1 svirt_file_type:filesystem { relabelfrom relabelto };
 ')
 
 #######################################
@@ -1016,10 +1041,10 @@ interface(`virt_relabel_sandbox_filesystem',`
 #
 interface(`virt_mounton_sandbox_file',`
 	gen_require(`
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
-	allow $1 container_file_t:dir_file_class_set mounton;
+	allow $1 svirt_file_type:dir_file_class_set mounton;
 ')
 
 #######################################
@@ -1035,11 +1060,11 @@ interface(`virt_mounton_sandbox_file',`
 interface(`virt_stream_connect_sandbox',`
 	gen_require(`
 		attribute svirt_sandbox_domain;
-		type container_file_t;
+		attribute svirt_file_type;
 	')
 
 	files_search_pids($1)
-	stream_connect_pattern($1, container_file_t, container_file_t, svirt_sandbox_domain)
+	stream_connect_pattern($1, svirt_file_type, svirt_file_type, svirt_sandbox_domain)
 	ps_process_pattern(svirt_sandbox_domain, $1)
 ')
 
@@ -1343,6 +1368,11 @@ template(`virt_sandbox_domain_template',`
 	logging_send_syslog_msg($1_t)
 
 	kernel_read_system_state($1_t)
+	kernel_read_all_proc($1_t)
+
+ #   optional_policy(`
+ #       container_runtime_typebounds($1_t)
+ #   ')
 ')
 
 ########################################
@@ -1361,6 +1391,25 @@ template(`virt_sandbox_domain',`
 	')
 
 	typeattribute  $1 svirt_sandbox_domain;
+')
+
+########################################
+## <summary>
+##	Make the specified type usable as a lxc network domain
+## </summary>
+## <param name="type">
+##	<summary>
+##	Type to be used as a lxc network domain
+##	</summary>
+## </param>
+#
+template(`virt_sandbox_net_domain',`
+	gen_require(`
+		attribute sandbox_net_domain;
+	')
+
+	virt_sandbox_domain($1)
+	typeattribute  $1 sandbox_net_domain;
 ')
 
 ########################################
@@ -1430,7 +1479,6 @@ interface(`virt_transition_svirt_sandbox',`
 
 	allow svirt_sandbox_domain $1:fd use;
 
-	allow svirt_sandbox_domain $1:fifo_file rw_fifo_file_perms;
 	allow svirt_sandbox_domain $1:process sigchld;
 	ps_process_pattern($1, svirt_sandbox_domain)
 ')
@@ -1618,6 +1666,38 @@ interface(`virt_dbus_chat',`
         ps_process_pattern(virtd_t, $1)
 ')
 
+########################################
+## <summary>
+##	Execute a file in a sandbox directory
+##	in the specified domain.
+## </summary>
+## <desc>
+##	<p>
+##	Execute a file in a sandbox directory
+##	in the specified domain.  This allows
+##	the specified domain to execute any file
+##	on these filesystems in the specified
+##	domain.
+##	</p>
+## </desc>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+## <param name="target_domain">
+##	<summary>
+##	The type of the new process.
+##	</summary>
+## </param>
+#
+interface(`virt_sandbox_domtrans',`
+	gen_require(`
+		type container_file_t;
+	')
+
+	domtrans_pattern($1,container_file_t, $2)
+')
 
 ########################################
 ## <summary>
@@ -1677,4 +1757,3 @@ interface(`virt_svirt_manage_tmp',`
 	manage_dirs_pattern($1, svirt_tmp_t, svirt_tmp_t)
 	manage_sock_files_pattern($1, svirt_tmp_t, svirt_tmp_t)
 ')
-

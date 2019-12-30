@@ -22,6 +22,11 @@ gen_tunable(staff_use_svirt, false)
 # Local policy
 #
 
+allow staff_t self:system all_system_perms;
+allow staff_t self:cap_userns { setpcap };
+
+corenet_ib_access_unlabeled_pkeys(staff_t)
+
 kernel_read_ring_buffer(staff_t)
 kernel_getattr_core_if(staff_t)
 kernel_getattr_message_if(staff_t)
@@ -32,9 +37,13 @@ kernel_write_numa_state(staff_t)
 
 fs_read_hugetlbfs_files(staff_t)
 files_dontaudit_read_all_symlinks(staff_t)
+fs_read_tmpfs_files(staff_t)
+fs_read_binfmt_misc(staff_t)
 
 dev_read_cpuid(staff_t)
 dev_read_kmsg(staff_t)
+dev_map_video_dev(staff_t)
+dev_rwx_zero(staff_t)
 
 domain_read_all_domains_state(staff_t)
 domain_getcap_all_domains(staff_t)
@@ -46,21 +55,25 @@ files_read_kernel_modules(staff_t)
 
 seutil_read_module_store(staff_t)
 seutil_run_newrole(staff_t, staff_r)
-#seutil_dbus_chat_semanage(staff_t)
+seutil_dbus_chat_semanage(staff_t)
 seutil_read_login_config(staff_t)
 
 storage_read_scsi_generic(staff_t)
 storage_write_scsi_generic(staff_t)
 
 term_use_unallocated_ttys(staff_t)
+term_use_generic_ptys(staff_t)
 
 auth_domtrans_pam_console(staff_t)
 
-#init_dbus_chat(staff_t)
-#init_dbus_chat_script(staff_t)
+init_dbus_chat(staff_t)
+init_dbus_chat_script(staff_t)
 init_status(staff_t)
 
 miscfiles_read_hwdata(staff_t)
+miscfiles_map_generic_certs(staff_t)
+
+mount_sigkill(staff_t)
 
 ifndef(`enable_mls',`
 	selinux_read_policy(staff_t)
@@ -68,6 +81,7 @@ ifndef(`enable_mls',`
 
 optional_policy(`
 	abrt_read_cache(staff_t)
+    abrt_map_cache(staff_t)
 ')
 
 optional_policy(`
@@ -107,8 +121,16 @@ optional_policy(`
 ')
 
 optional_policy(`
-	docker_stream_connect(staff_t)
-	docker_exec(staff_t)
+    container_stream_connect(staff_t)
+    container_runtime_exec(staff_t)
+')
+
+optional_policy(`
+    dirsrv_stream_connect(staff_t)
+    dirsrv_manage_log(staff_t)
+    dirsrv_manage_var_lib(staff_t)
+    dirsrv_manage_var_run(staff_t)
+    dirsrv_manage_config(staff_t)
 ')
 
 optional_policy(`
@@ -132,6 +154,11 @@ optional_policy(`
 ')
 
 optional_policy(`
+    fwupd_dbus_chat(staff_t)
+    fwupd_read_cache_files(staff_t)
+')
+
+optional_policy(`
 	irc_role(staff_r, staff_t)
 ')
 
@@ -144,11 +171,32 @@ optional_policy(`
 ')
 
 optional_policy(`
+    kpatch_run(staff_t, staff_r)
+')
+
+optional_policy(`
+    iotop_run(staff_t, staff_r)
+')
+
+optional_policy(`
+	iptables_systemctl(staff_t)
+    iptables_run(staff_t, staff_r)
+')
+
+optional_policy(`
+    iotop_run(staff_t, staff_r)
+')
+
+optional_policy(`
 	logadm_role_change(staff_r)
 ')
 
 optional_policy(`
 	lpd_list_spool(staff_t)
+')
+
+optional_policy(`
+    mandb_map_cache_files(staff_t)
 ')
 
 optional_policy(`
@@ -169,10 +217,6 @@ optional_policy(`
 	netutils_run_traceroute(staff_t, staff_r)
 	netutils_signal_ping(staff_t)
 	netutils_kill_ping(staff_t)
-')
-
-optional_policy(`
-	networkmanager_dbus_chat(staff_t)
 ')
 
 optional_policy(`
@@ -233,11 +277,15 @@ optional_policy(`
 optional_policy(`
 	sysadm_role_change(staff_r)
 	userdom_dontaudit_use_user_terminals(staff_t)
+    userdom_dontaudit_read_admin_home_files(staff_t)
 ')
 
 optional_policy(`
-	systemd_read_unit_files(staff_t)
+    systemd_config_all_services(staff_t)
 	systemd_exec_systemctl(staff_t)
+    systemd_hwdb_mmap_config(staff_t)
+    systemd_manage_all_unit_files(staff_t)
+    systemd_manage_unit_dirs(staff_t)
 ')
 
 optional_policy(`
@@ -252,10 +300,6 @@ optional_policy(`
 
 optional_policy(`
 	sudo_role_template(staff, staff_r, staff_t)
-	optional_policy(`
-		toor_entry_spec_domtrans(staff_sudo_t)	
-		toor_role_change(staff_r)
-	')
 ')
 
 optional_policy(`
@@ -293,16 +337,13 @@ optional_policy(`
 ')
 
 optional_policy(`
-        xserver_role(staff_r, staff_t)
-	miscfiles_map_fonts(staff_t)
+    wireshark_role(staff_r, staff_t)
+    wireshark_rw_shm(staff_t)
 ')
 
 optional_policy(`
 	xserver_read_log(staff_t)
-')
-
-optional_policy(`
-	dbus_role_template(staff, staff_r, staff_t)
+	xserver_run(staff_t, staff_r)
 ')
 
 ifndef(`distro_redhat',`
@@ -316,6 +357,10 @@ ifndef(`distro_redhat',`
 
 	optional_policy(`
 		cron_role(staff_r, staff_t)
+	')
+
+	optional_policy(`
+		dbus_role_template(staff, staff_r, staff_t)
 	')
 
 	optional_policy(`
@@ -414,6 +459,8 @@ optional_policy(`
 		dev_rw_kvm(staff_t)
 		virt_manage_images(staff_t)
 		virt_stream_connect_svirt(staff_t)
+		virt_systemctl(staff_t)
+		virt_rw_stream_sockets_svirt(staff_t)
 		virt_exec(staff_t)
 	')
 ')

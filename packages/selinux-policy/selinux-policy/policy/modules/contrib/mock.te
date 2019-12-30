@@ -44,7 +44,7 @@ files_config_file(mock_etc_t)
 # mock local policy
 #
 
-allow mock_t self:capability { sys_admin sys_ptrace setfcap setuid sys_chroot chown audit_write dac_override sys_nice mknod fsetid setgid fowner };
+allow mock_t self:capability { sys_admin sys_ptrace setfcap setuid sys_chroot chown audit_write dac_read_search   sys_nice mknod fsetid setgid fowner };
 allow mock_t self:capability2 block_suspend;
 allow mock_t self:process { siginh noatsecure signal_perms transition rlimitinh setsched setpgid };
 # Needed because mock can run java and mono withing build environment
@@ -130,8 +130,10 @@ fs_setattr_tmpfs_dirs(mock_t)
 selinux_get_enforce_mode(mock_t)
 
 term_search_ptys(mock_t)
+term_use_generic_ptys(mock_t)
 term_mount_pty_fs(mock_t)
 term_unmount_pty_fs(mock_t)
+term_use_ptmx(mock_t)
 
 auth_use_nsswitch(mock_t)
 
@@ -143,7 +145,15 @@ libs_exec_ldconfig(mock_t)
 logging_send_audit_msgs(mock_t)
 logging_send_syslog_msg(mock_t)
 
+lvm_manage_lock(mock_t)
+lvm_read_config(mock_t)
+lvm_read_metadata(mock_t)
+lvm_getattr_exec_files(mock_t)
+
+miscfiles_dontaudit_write_generic_cert_files(mock_t)
+
 userdom_use_user_ptys(mock_t)
+userdom_use_user_ttys(mock_t)
 
 files_search_home(mock_t)
 
@@ -192,7 +202,7 @@ optional_policy(`
 #
 # mock_build local policy
 #
-allow mock_build_t self:capability { sys_admin setfcap setuid sys_chroot chown dac_override sys_nice mknod fsetid setgid fowner sys_ptrace };
+allow mock_build_t self:capability { sys_admin setfcap setuid sys_chroot chown dac_read_search  sys_nice mknod fsetid setgid fowner sys_ptrace };
 dontaudit mock_build_t self:capability audit_write;
 allow mock_build_t self:process { fork setsched setpgid signal_perms };
 allow mock_build_t self:netlink_audit_socket { create_socket_perms nlmsg_relay };
@@ -271,6 +281,7 @@ libs_exec_ldconfig(mock_build_t)
 
 term_use_all_inherited_terms(mock_build_t)
 userdom_use_inherited_user_ptys(mock_build_t)
+term_dontaudit_manage_pty_dirs(mock_build_t)
 
 tunable_policy(`mock_enable_homedirs',`
 	userdom_read_user_home_content_files(mock_build_t)

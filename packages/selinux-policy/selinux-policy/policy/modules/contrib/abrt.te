@@ -124,6 +124,10 @@ allow abrt_t self:udp_socket create_socket_perms;
 allow abrt_t self:unix_dgram_socket create_socket_perms;
 allow abrt_t self:netlink_route_socket r_netlink_socket_perms;
 
+tunable_policy(`deny_execmem',`',`
+	allow abrt_t self:process execmem;
+')
+
 # abrt etc files
 list_dirs_pattern(abrt_t, abrt_etc_t, abrt_etc_t)
 rw_files_pattern(abrt_t, abrt_etc_t, abrt_etc_t)
@@ -168,6 +172,7 @@ kernel_rw_kernel_sysctl(abrt_t)
 # needed by docker BZ #1194280
 kernel_read_net_sysctls(abrt_t)
 kernel_rw_usermodehelper_state(abrt_t)
+kernel_read_sysctl(abrt_t)
 
 corecmd_exec_bin(abrt_t)
 corecmd_exec_shell(abrt_t)
@@ -200,23 +205,32 @@ files_read_config_files(abrt_t)
 files_read_etc_runtime_files(abrt_t)
 files_read_var_symlinks(abrt_t)
 files_read_var_lib_files(abrt_t)
+files_map_var_lib_files(abrt_t)
 files_read_generic_tmp_files(abrt_t)
+files_map_generic_tmp_files(abrt_t)
 files_read_kernel_modules(abrt_t)
 files_dontaudit_list_default(abrt_t)
 files_dontaudit_read_default_files(abrt_t)
 files_dontaudit_read_all_symlinks(abrt_t)
+files_dontaudit_write_usr_files(abrt_t)
 files_dontaudit_getattr_all_sockets(abrt_t)
+files_dontaudit_read_root_files(abrt_t)
 files_list_mnt(abrt_t)
 fs_list_all(abrt_t)
+files_manage_usr_files(abrt_t)
+files_manage_usr_dirs(abrt_t)
 
 fs_list_inotifyfs(abrt_t)
 fs_getattr_all_fs(abrt_t)
 fs_getattr_all_dirs(abrt_t)
 fs_read_fusefs_files(abrt_t)
+fs_mmap_fusefs_files(abrt_t)
 fs_read_noxattr_fs_files(abrt_t)
 fs_read_nfs_files(abrt_t)
 fs_read_nfs_symlinks(abrt_t)
 fs_search_all(abrt_t)
+fs_getattr_nsfs_files(abrt_t)
+fs_map_dos_files(abrt_t)
 
 storage_dontaudit_read_fixed_disk(abrt_t)
 
@@ -225,6 +239,8 @@ logging_mmap_journal(abrt_t)
 logging_send_syslog_msg(abrt_t)
 logging_stream_connect_syslog(abrt_t)
 logging_read_syslog_pid(abrt_t)
+
+libs_dontaudit_write_lib_dirs(abrt_t)
 
 auth_use_nsswitch(abrt_t)
 auth_map_passwd(abrt_t)
@@ -236,6 +252,7 @@ miscfiles_read_public_files(abrt_t)
 miscfiles_dontaudit_access_check_cert(abrt_t)
 miscfiles_dontaudit_write_generic_cert_files(abrt_t)
 
+userdom_dontaudit_mmap_user_home_content_files(abrt_t)
 userdom_dontaudit_read_user_home_content_files(abrt_t)
 userdom_dontaudit_read_admin_home_files(abrt_t)
 
@@ -258,10 +275,25 @@ optional_policy(`
 
 optional_policy(`
 	container_stream_connect(abrt_t)
+    virt_stub_container_image()
+    allow abrt_t container_file_t:file map;
+')
+
+optional_policy(`
+    gnome_map_generic_data_home_files(abrt_t)
 ')
 
 optional_policy(`
 	kdump_manage_crash(abrt_t)
+')
+
+optional_policy(`
+	lvm_dontaudit_rw_lock_dir(abrt_t)
+')
+
+optional_policy(`
+    mta_send_mail(abrt_t)
+    mta_manage_home_rw(abrt_t)
 ')
 
 optional_policy(`
@@ -301,6 +333,7 @@ optional_policy(`
 	rpm_manage_cache(abrt_t)
 	rpm_manage_log(abrt_t)
 	rpm_manage_pid_files(abrt_t)
+	rpm_read_tmp_files(abrt_t)
 	rpm_read_db(abrt_t)
 	rpm_signull(abrt_t)
 ')
@@ -313,9 +346,9 @@ optional_policy(`
 ')
 
 # to run mailx plugin
-optional_policy(`
-	sendmail_domtrans(abrt_t)
-')
+#optional_policy(`
+#	sendmail_domtrans(abrt_t)
+#')
 
 optional_policy(`
 	sosreport_domtrans(abrt_t)
@@ -490,7 +523,8 @@ optional_policy(`
 #
 
 allow abrt_dump_oops_t self:capability { kill net_admin sys_ptrace ipc_lock fowner chown fsetid dac_read_search dac_override setuid setgid };
-allow abrt_dump_oops_t self:process setfscreate;
+allow abrt_dump_oops_t self:cap_userns { kill sys_ptrace };
+allow abrt_dump_oops_t self:process {setfscreate setcap};
 allow abrt_dump_oops_t self:fifo_file rw_fifo_file_perms;
 allow abrt_dump_oops_t self:unix_stream_socket create_stream_socket_perms;
 
@@ -517,6 +551,7 @@ kernel_read_security_state(abrt_dump_oops_t)
 auth_read_passwd(abrt_dump_oops_t)
 
 corecmd_getattr_all_executables(abrt_dump_oops_t)
+corecmd_exec_bin(abrt_dump_oops_t)
 
 dev_read_urand(abrt_dump_oops_t)
 dev_read_rand(abrt_dump_oops_t)
@@ -537,6 +572,7 @@ files_map_non_security_files(abrt_dump_oops_t)
 fs_getattr_all_fs(abrt_dump_oops_t)
 fs_list_inotifyfs(abrt_dump_oops_t)
 fs_list_pstorefs(abrt_dump_oops_t)
+fs_getattr_nsfs_files(abrt_dump_oops_t)
 
 selinux_compute_create_context(abrt_dump_oops_t)
 
@@ -547,6 +583,15 @@ logging_mmap_generic_logs(abrt_dump_oops_t)
 logging_mmap_journal(abrt_dump_oops_t)
 
 init_read_var_lib_files(abrt_dump_oops_t)
+
+optional_policy(`
+    sssd_read_public_files(abrt_dump_oops_t)
+    sssd_stream_connect(abrt_dump_oops_t)
+')
+
+optional_policy(`
+	xserver_exec(abrt_dump_oops_t)
+')
 
 optional_policy(`
     nscd_dontaudit_write_sock_file(abrt_dump_oops_t)
@@ -566,7 +611,6 @@ auth_read_passwd(abrt_watch_log_t)
 auth_use_nsswitch(abrt_watch_log_t)
 
 domtrans_pattern(abrt_watch_log_t, abrt_dump_oops_exec_t, abrt_dump_oops_t)
-allow abrt_watch_log_t abrt_dump_oops_exec_t:file map;
 
 corecmd_exec_bin(abrt_watch_log_t)
 
@@ -586,7 +630,7 @@ tunable_policy(`abrt_upload_watch_anon_write',`
 # Upload watch local policy
 #
 
-allow abrt_upload_watch_t self:capability { dac_read_search dac_override chown fsetid };
+allow abrt_upload_watch_t self:capability { dac_read_search  chown fsetid };
 
 manage_files_pattern(abrt_upload_watch_t, abrt_upload_watch_tmp_t, abrt_upload_watch_tmp_t)
 manage_dirs_pattern(abrt_upload_watch_t, abrt_upload_watch_tmp_t, abrt_upload_watch_tmp_t)

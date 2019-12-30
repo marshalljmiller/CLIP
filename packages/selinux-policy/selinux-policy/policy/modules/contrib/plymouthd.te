@@ -33,7 +33,7 @@ files_pid_file(plymouthd_var_run_t)
 
 allow plymouthd_t self:capability { sys_admin sys_tty_config };
 allow plymouthd_t self:capability2 block_suspend;
-dontaudit plymouthd_t self:capability dac_override;
+dontaudit plymouthd_t self:capability{ dac_read_search   };
 allow plymouthd_t self:process { signal getsched };
 allow plymouthd_t self:netlink_kobject_uevent_socket create_socket_perms;
 allow plymouthd_t self:fifo_file rw_fifo_file_perms;
@@ -64,16 +64,20 @@ dev_rw_dri(plymouthd_t)
 dev_read_sysfs(plymouthd_t)
 dev_read_framebuffer(plymouthd_t)
 dev_write_framebuffer(plymouthd_t)
+dev_map_framebuffer(plymouthd_t)
 
 domain_use_interactive_fds(plymouthd_t)
 
 fs_getattr_all_fs(plymouthd_t)
+fs_search_efivarfs_dirs(plymouthd_t)
 
 term_getattr_pty_fs(plymouthd_t)
 term_use_all_terms(plymouthd_t)
 term_use_ptmx(plymouthd_t)
+term_use_usb_ttys(plymouthd_t)
 
 init_signal(plymouthd_t)
+init_rw_stream_sockets(plymouth_t)
 
 logging_link_generic_logs(plymouthd_t)
 logging_delete_generic_logs(plymouthd_t)
@@ -112,7 +116,6 @@ optional_policy(`
 allow plymouth_t self:process signal;
 allow plymouth_t self:fifo_file rw_file_perms;
 allow plymouth_t self:unix_stream_socket create_stream_socket_perms;
-allow plymouth_t self:capability2 block_suspend;
 
 kernel_read_system_state(plymouth_t)
 kernel_stream_connect(plymouth_t)

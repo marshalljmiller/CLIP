@@ -37,7 +37,7 @@ files_type(prelink_var_lib_t)
 # Local policy
 #
 
-allow prelink_t self:capability { chown dac_override fowner fsetid setfcap sys_resource };
+allow prelink_t self:capability { chown dac_read_search  fowner fsetid setfcap sys_resource };
 allow prelink_t self:process { execheap execmem execstack signal };
 allow prelink_t self:fifo_file rw_fifo_file_perms;
 
@@ -143,7 +143,7 @@ optional_policy(`
 
 optional_policy(`
 	allow prelink_cron_system_t self:capability setuid;
-	allow prelink_cron_system_t self:process { setsched setfscreate signal };
+	allow prelink_cron_system_t self:process { setsched setfscreate signal setrlimit };
 	allow prelink_cron_system_t self:fifo_file rw_fifo_file_perms;
 	allow prelink_cron_system_t self:unix_dgram_socket { write bind create setopt };
 

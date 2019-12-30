@@ -19,6 +19,9 @@ files_lock_file(dirsrvadmin_lock_t)
 type dirsrvadmin_tmp_t;
 files_tmp_file(dirsrvadmin_tmp_t)
 
+type dirsrvadmin_unit_file_t;
+systemd_unit_file(dirsrvadmin_unit_file_t)
+
 type dirsrvadmin_unconfined_script_t;
 type dirsrvadmin_unconfined_script_exec_t;
 domain_type(dirsrvadmin_unconfined_script_t)
@@ -32,7 +35,7 @@ role system_r types dirsrvadmin_unconfined_script_t;
 #
 
 allow dirsrvadmin_t self:fifo_file rw_fifo_file_perms;
-allow dirsrvadmin_t self:capability { dac_read_search dac_override sys_tty_config sys_resource };
+allow dirsrvadmin_t self:capability { dac_read_search  sys_tty_config sys_resource };
 allow dirsrvadmin_t self:process { setrlimit signal_perms };
 
 manage_files_pattern(dirsrvadmin_t, dirsrvadmin_tmp_t, dirsrvadmin_tmp_t)
@@ -73,7 +76,7 @@ optional_policy(`
 	apache_content_alias_template(dirsrvadmin, dirsrvadmin)
 
 	allow dirsrvadmin_script_t self:process { getsched getpgid };
-	allow dirsrvadmin_script_t self:capability { fowner fsetid setuid net_bind_service setgid chown sys_nice kill dac_read_search dac_override };
+	allow dirsrvadmin_script_t self:capability { fowner fsetid setuid net_bind_service setgid chown sys_nice kill dac_read_search  };
 	allow dirsrvadmin_script_t self:tcp_socket create_stream_socket_perms;
 	allow dirsrvadmin_script_t self:udp_socket create_socket_perms;
 	allow dirsrvadmin_script_t self:unix_dgram_socket create_socket_perms;
@@ -86,6 +89,7 @@ optional_policy(`
 
 	kernel_read_kernel_sysctls(dirsrvadmin_script_t)
 
+    auth_read_passwd(dirsrvadmin_script_t)
 
 	corenet_tcp_bind_generic_node(dirsrvadmin_script_t)
 	corenet_udp_bind_generic_node(dirsrvadmin_script_t)
@@ -101,12 +105,23 @@ optional_policy(`
 	sysnet_read_config(dirsrvadmin_script_t)
 
 	manage_files_pattern(dirsrvadmin_script_t, dirsrvadmin_tmp_t, dirsrvadmin_tmp_t)
+	manage_lnk_files_pattern(dirsrvadmin_script_t, dirsrvadmin_tmp_t, dirsrvadmin_tmp_t)
 	manage_dirs_pattern(dirsrvadmin_script_t, dirsrvadmin_tmp_t, dirsrvadmin_tmp_t)
 	files_tmp_filetrans(dirsrvadmin_script_t, dirsrvadmin_tmp_t, { file dir })
+    
+    miscfiles_read_certs(dirsrvadmin_script_t)
+
+    optional_policy(`
+        dirsrvadmin_systemctl(dirsrvadmin_script_t)
+    ')
 
 	optional_policy(`
 		apache_read_modules(dirsrvadmin_script_t)
 		apache_read_config(dirsrvadmin_script_t)
+        apache_read_pid_files(dirsrvadmin_script_t)
+        apache_read_tmp_symlinks(dirsrvadmin_script_t)
+        apache_read_tmp_files(dirsrvadmin_script_t)
+        apache_read_tmp_dirs(dirsrvadmin_script_t)
 		apache_signal(dirsrvadmin_script_t)
 		apache_signull(dirsrvadmin_script_t)
 	')

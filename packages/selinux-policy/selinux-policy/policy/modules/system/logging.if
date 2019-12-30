@@ -61,7 +61,7 @@ interface(`logging_log_file',`
 #
 interface(`logging_send_audit_msgs',`
 	allow $1 self:capability audit_write;
-	allow $1 self:netlink_audit_socket { r_netlink_socket_perms nlmsg_relay };
+	allow $1 self:netlink_audit_socket { r_netlink_socket_perms nlmsg_relay nlmsg_tty_audit };
 ')
 
 #######################################
@@ -77,6 +77,24 @@ interface(`logging_send_audit_msgs',`
 interface(`logging_dontaudit_send_audit_msgs',`
 	dontaudit $1 self:capability audit_write;
 	dontaudit $1 self:netlink_audit_socket { r_netlink_socket_perms nlmsg_relay };
+')
+
+########################################
+## <summary>
+##      Create netlink audit socket
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`logging_create_syslog_netlink_audit_socket',`
+	gen_require(`
+		type syslogd_t;
+	')
+
+	allow $1 syslogd_t:netlink_audit_socket create_netlink_socket_perms;
 ')
 
 ########################################
@@ -146,23 +164,22 @@ interface(`logging_read_audit_log',`
 
 ########################################
 ## <summary>
-##      Map the audit log.
+##	Map the audit log.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 ## <rolecap/>
 #
 interface(`logging_map_audit_log',`
-        gen_require(`
-                type auditd_log_t;
-        ')
+	gen_require(`
+		type auditd_log_t;
+	')
 
-        allow $1 auditd_log_t:file map;
+	allow $1 auditd_log_t:file map;
 ')
-
 ########################################
 ## <summary>
 ##	Execute auditctl in the auditctl domain.
@@ -259,7 +276,7 @@ interface(`logging_run_auditd',`
 ##	Domain allowed access.
 ##	</summary>
 ## </param>
-##
+#
 interface(`logging_stream_connect_auditd',`
 	refpolicywarn(`$0($*) has been deprecated, logging_stream_connect_dispatcher() should be used instead.')
 	logging_stream_connect_dispatcher($1)
@@ -281,10 +298,9 @@ interface(`logging_domtrans_dispatcher',`
 	')
 
 	domtrans_pattern($1, audisp_exec_t, audisp_t)
-    allow $1 audisp_exec_t:file map;
 ')
 
-#########################################
+########################################
 ## <summary>
 ##	Signal the audit dispatcher.
 ## </summary>
@@ -321,6 +337,7 @@ interface(`logging_signal_dispatcher',`
 interface(`logging_dispatcher_domain',`
 	gen_require(`
 		type audisp_t;
+		type auditd_t;
 		role system_r;
 	')
 
@@ -330,6 +347,7 @@ interface(`logging_dispatcher_domain',`
 	role system_r types $1;
 
 	domtrans_pattern(audisp_t, $2, $1)
+	domtrans_pattern(auditd_t, $2, $1)
 	allow audisp_t $1:process { sigkill sigstop signull signal };
 
 	allow audisp_t $2:file getattr;
@@ -633,10 +651,11 @@ interface(`logging_create_devlog_dev',`
 		type devlog_t;
 	')
 
-	allow $1 devlog_t:sock_file manage_sock_file_perms;
-	dev_filetrans($1, devlog_t, sock_file)
+	allow $1 devlog_t:lnk_file manage_lnk_file_perms;
+    allow $1 devlog_t:sock_file manage_sock_file_perms;
+	dev_filetrans($1, devlog_t, lnk_file, "log")
 	init_pid_filetrans($1, devlog_t, sock_file, "syslog")
-	logging_syslogd_pid_filetrans($1, devlog_t, sock_file, "dev-log")
+    logging_syslogd_pid_filetrans($1, devlog_t, sock_file, "dev-log")
 ')
 
 ########################################
@@ -655,6 +674,7 @@ interface(`logging_relabel_devlog_dev',`
 	')
 
 	allow $1 devlog_t:sock_file relabel_sock_file_perms;
+	allow $1 devlog_t:lnk_file relabelto_lnk_file_perms;
 ')
 
 ########################################
@@ -692,25 +712,6 @@ interface(`logging_relabel_syslog_pid_socket',`
 	')
 
 	allow $1 syslogd_var_run_t:sock_file relabel_sock_file_perms;
-')
-
-########################################
-## <summary>
-##	Relabel the syslog pid files.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`logging_relabel_syslog_pid_files',`
-	gen_require(`
-		type syslogd_var_run_t;
-	')
-
-	allow $1 syslogd_var_run_t:file { setattr relabel_file_perms };
-	allow $1 syslogd_var_run_t:dir { read setattr relabel_dir_perms };
 ')
 
 ########################################
@@ -755,21 +756,21 @@ interface(`logging_read_audit_config',`
 
 ########################################
 ## <summary>
-##      Map the auditd configuration files.
+##	Map the auditd configuration files.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 ## <rolecap/>
 #
 interface(`logging_map_audit_config',`
-        gen_require(`
-                type auditd_etc_t;
-        ')
+	gen_require(`
+		type auditd_etc_t;
+	')
 
-        allow $1 auditd_etc_t:file map;
+	allow $1 auditd_etc_t:file map;
 ')
 
 ########################################
@@ -1003,26 +1004,6 @@ interface(`logging_dontaudit_getattr_all_logs',`
 
 ########################################
 ## <summary>
-##	Allow domain to get the attributes
-##	of audit log files.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`logging_getattr_audit_logs',`
-	gen_require(`
-		type auditd_log_t;
-	')
-
-	allow $1 auditd_log_t:dir search;
-	allow $1 auditd_log_t:file getattr;
-')
-
-########################################
-## <summary>
 ##	Read the atttributes of any log file
 ## </summary>
 ## <param name="domain">
@@ -1094,29 +1075,9 @@ interface(`logging_read_all_logs',`
 	')
 
 	files_search_var($1)
-        allow $1 logfile:file map;
 	allow $1 logfile:dir list_dir_perms;
+	allow $1 logfile:file map;
 	read_files_pattern($1, logfile, logfile)
-')
-
-########################################
-## <summary>
-##	Read all log dirs.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-## <rolecap/>
-#
-interface(`logging_list_log_dirs',`
-	gen_require(`
-		attribute logfile;
-	')
-
-	files_search_var($1)
-	allow $1 logfile:dir list_dir_perms;
 ')
 
 ########################################
@@ -1177,9 +1138,10 @@ interface(`logging_manage_all_logs',`
 	')
 
 	files_search_var($1)
+	manage_dirs_pattern($1, logfile, logfile)
 	manage_files_pattern($1, logfile, logfile)
-	allow $1 logfile:file map;
 	manage_lnk_files_pattern($1, logfile, logfile)
+    allow $1 logfile:file map;
 ')
 
 ########################################
@@ -1202,6 +1164,25 @@ interface(`logging_read_generic_logs',`
 	allow $1 var_log_t:dir list_dir_perms;
 	allow $1 var_log_t:file map;
 	read_files_pattern($1, var_log_t, var_log_t)
+')
+
+########################################
+## <summary>
+##	Create generic log files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`logging_create_generic_logs',`
+	gen_require(`
+		type var_log_t;
+	')
+
+	allow $1 var_log_t:file create;
 ')
 
 ########################################
@@ -1244,21 +1225,21 @@ interface(`logging_delete_generic_logs',`
 
 ########################################
 ## <summary>
-##      Map generic log files.
+##	Map generic log files.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 ## <rolecap/>
 #
 interface(`logging_mmap_generic_logs',`
-        gen_require(`
-                type var_log_t;
-        ')
+	gen_require(`
+		type var_log_t;
+	')
 
-        allow $1 var_log_t:file map;
+	allow $1 var_log_t:file map;
 ')
 
 ########################################
@@ -1279,6 +1260,43 @@ interface(`logging_write_generic_logs',`
 	files_search_var($1)
 	allow $1 var_log_t:dir list_dir_perms;
 	write_files_pattern($1, var_log_t, var_log_t)
+')
+
+########################################
+## <summary>
+##	Create, read, write, and delete symbolic
+##	links in the /var/log directory.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`logging_manage_var_log_symlinks',`
+	gen_require(`
+		type var_log_t;
+	')
+
+	manage_lnk_files_pattern($1, var_log_t, var_log_t)
+')
+
+########################################
+## <summary>
+##	Allow attempts to write to /var/log
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`logging_write_var_log_dirs',`
+	gen_require(`
+		type var_log_t;
+	')
+
+	allow $1 var_log_t:dir { setattr write };
 ')
 
 ########################################
@@ -1360,27 +1378,6 @@ interface(`logging_manage_generic_logs',`
 
 ########################################
 ## <summary>
-##	Rotate generic log files
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-## <rolecap/>
-#
-interface(`logging_rotate_generic_logs',`
-	gen_require(`
-		type var_log_t;
-	')
-
-	files_search_var($1)
-	allow $1 var_log_t:dir { write remove_name add_name };
-	allow $1 var_log_t:file { rename unlink create };
-')
-
-########################################
-## <summary>
 ##	All of the rules required to administrate
 ##	the audit environment
 ## </summary>
@@ -1453,6 +1450,28 @@ interface(`logging_systemctl_audit',`
 	allow $1 auditd_unit_file_t:service manage_service_perms;
 
 	ps_process_pattern($1, auditd_t)
+')
+########################################
+## <summary>
+##	Execute auditd server in the auditd domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`logging_systemctl_syslogd',`
+	gen_require(`
+		type syslogd_t;
+		type syslogd_unit_file_t;
+	')
+
+	systemd_exec_systemctl($1)
+	allow $1 syslogd_unit_file_t:file read_file_perms;
+	allow $1 syslogd_unit_file_t:service manage_service_perms;
+
+	ps_process_pattern($1, syslogd_t)
 ')
 
 ########################################
@@ -1540,7 +1559,6 @@ interface(`logging_admin_syslog',`
 interface(`logging_admin',`
 	logging_admin_audit($1, $2)
 	logging_admin_syslog($1, $2)
-	journalctl_run($1, $2)
 ')
 
 ########################################
@@ -1592,33 +1610,34 @@ interface(`logging_filetrans_named_content',`
 	init_named_pid_filetrans($1, syslogd_var_run_t, dir, "journal")
 
     logging_log_filetrans($1, var_log_t, dir, "anaconda")
+    logging_log_filetrans($1, var_log_t, dir, "remote")
 ')
 
 #######################################
 ## <summary>
-##      Create objects in /run/systemd/journal/ directory
-##      with an automatic type transition to
-##      a specified private type.
+##	Create objects in /run/systemd/journal/ directory
+##	with an automatic type transition to
+##	a specified private type.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 ## <param name="private_type">
-##      <summary>
-##      The type of the object to create.
-##      </summary>
+##	<summary>
+##	The type of the object to create.
+##	</summary>
 ## </param>
 ## <param name="object_class">
-##      <summary>
-##      The class of the object to be created.
-##      </summary>
+##	<summary>
+##	The class of the object to be created.
+##	</summary>
 ## </param>
 ## <param name="name" optional="true">
-##      <summary>
-##      The name of the object being created.
-##      </summary>
+##	<summary>
+##	The name of the object being created.
+##	</summary>
 ## </param>
 #
 interface(`logging_syslogd_pid_filetrans',`
@@ -1632,12 +1651,12 @@ interface(`logging_syslogd_pid_filetrans',`
 
 #######################################
 ## <summary>
-##      Map files in /run/log/journal/ directory.
+##	Map files in /run/log/journal/ directory.
 ## </summary>
 ## <param name="domain">
-##      <summary>
-##      Domain allowed access.
-##      </summary>
+##	<summary>
+##	Domain allowed access.
+##	</summary>
 ## </param>
 #
 interface(`logging_mmap_journal',`
@@ -1646,4 +1665,24 @@ interface(`logging_mmap_journal',`
 	')
 
 	allow $1 syslogd_var_run_t:file map;
+
+')
+
+########################################
+## <summary>
+##	Send a message to syslogd over a unix domain
+##	datagram socket.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`logging_dgram_send',`
+	gen_require(`
+		type syslogd_t;
+	')
+
+	allow $1 syslogd_t:unix_dgram_socket sendto;
 ')

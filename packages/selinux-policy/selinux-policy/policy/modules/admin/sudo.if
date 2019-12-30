@@ -54,9 +54,9 @@ template(`sudo_role_template',`
 	allow $1_sudo_t $1_sudo_tmp_t:file manage_file_perms;
 	files_tmp_filetrans($1_sudo_t, $1_sudo_tmp_t, file)
 
-        allow $1_sudo_t $3:dir search_dir_perms;;
-        allow $1_sudo_t $3:file read_file_perms;;
-        allow $1_sudo_t $3:key search;
+	allow $1_sudo_t $3:dir search_dir_perms;;
+	allow $1_sudo_t $3:file read_file_perms;;
+	allow $1_sudo_t $3:key search;
 
 	# Enter this derived domain from the user domain
 	domtrans_pattern($3, sudo_exec_t, $1_sudo_t)
@@ -81,6 +81,9 @@ template(`sudo_role_template',`
 
 	logging_send_syslog_msg($1_sudo_t)
 
+    term_use_generic_ptys($1_sudo_t)
+    term_setattr_generic_ptys($1_sudo_t)
+
 	optional_policy(`
 		mta_role($2, $1_sudo_t)
 	')
@@ -89,10 +92,7 @@ template(`sudo_role_template',`
 	    	kerberos_manage_host_rcache($1_sudo_t)
 		kerberos_read_config($1_sudo_t)
 	')
-	
-	optional_policy(`
-		sssd_read_config($1_sudo_t)
-	')
+
 ')
 
 ########################################
@@ -149,29 +149,4 @@ interface(`sudo_manage_db',`
     
     manage_dirs_pattern($1, sudo_db_t, sudo_db_t)
     manage_files_pattern($1, sudo_db_t, sudo_db_t)
-')
-
-######################################
-## <summary>
-##  Allow to manage sudoers files.
-## </summary>
-## <param name="domain">
-##  <summary>
-##  Domain allowed access.
-##  </summary>
-## </param>
-#
-interface(`sudo_manage_sudoers',`
-    gen_require(`
-        type sudo_sudoers_t;
-    ')
-    
-    manage_dirs_pattern($1, sudo_sudoers_t, sudo_sudoers_t)
-    manage_files_pattern($1, sudo_sudoers_t, sudo_sudoers_t)
-    files_rw_etc_dirs($1)
-    filetrans_pattern($1, sudo_sudoers_t, sudo_sudoers_t, file, "sudoers")
-    filetrans_pattern($1, sudo_sudoers_t, sudo_sudoers_t, dir, "sudoers.d")
-    files_etc_filetrans($1, sudo_sudoers_t, file, "sudoers")
-    files_etc_filetrans($1, sudo_sudoers_t, file, "sudoers.tmp")
-    files_etc_filetrans($1, sudo_sudoers_t, dir, "sudoers.d")
 ')

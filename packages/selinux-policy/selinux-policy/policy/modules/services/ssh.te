@@ -21,11 +21,19 @@ gen_tunable(ssh_sysadm_login, false)
 
 ## <desc>
 ## <p>
-## Allow ssh with chroot env to read and write files 
+## allow ssh with chroot env to read and write files
 ## in the user home directories
 ## </p>
 ## </desc>
 gen_tunable(ssh_chroot_rw_homedirs, false)
+
+## <desc>
+## <p>
+## Allow sshd to use tcp wrappers
+## </p>
+## </desc>
+gen_tunable(ssh_use_tcpd, false)
+
 
 attribute ssh_dyntransition_domain;
 attribute ssh_server;
@@ -110,7 +118,7 @@ ifdef(`enable_mcs',`
 # SSH client local policy
 #
 
-allow ssh_t self:capability { setuid setgid dac_override dac_read_search };
+allow ssh_t self:capability { setuid setgid  dac_read_search };
 allow ssh_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 allow ssh_t self:fd use;
 allow ssh_t self:fifo_file rw_fifo_file_perms;
@@ -169,8 +177,6 @@ corenet_sendrecv_ssh_client_packets(ssh_t)
 corenet_tcp_bind_generic_node(ssh_t)
 #corenet_tcp_bind_all_unreserved_ports(ssh_t)
 corenet_rw_tun_tap_dev(ssh_t)
-
-sysnet_read_config(ssh_t)
 
 dev_read_rand(ssh_t)
 dev_read_urand(ssh_t)
@@ -236,6 +242,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    gpg_agent_stream_connect(ssh_t)
+')
+
+optional_policy(`
 	xserver_user_x_domain_template(ssh, ssh_t, ssh_tmpfs_t)
 	xserver_domtrans_xauth(ssh_t)
 ')
@@ -248,8 +258,13 @@ optional_policy(`
 
 allow ssh_keysign_t self:capability { setgid setuid };
 allow ssh_keysign_t self:unix_stream_socket create_socket_perms;
+allow ssh_keysign_t self:udp_socket create_socket_perms;
 
-allow ssh_keysign_t sshd_key_t:file { getattr read };
+allow ssh_keysign_t sshd_key_t:file { getattr open read };
+
+kernel_read_network_state(ssh_keysign_t)
+
+auth_read_passwd(ssh_keysign_t)
 
 dev_read_urand(ssh_keysign_t)
 dev_read_rand(ssh_keysign_t)
@@ -258,6 +273,14 @@ files_read_etc_files(ssh_keysign_t)
 
 optional_policy(`
 	nscd_use(ssh_keysign_t)
+')
+
+optional_policy(`
+    sssd_read_public_files(ssh_keysign_t)
+')
+
+optional_policy(`
+    sge_rw_tcp_sockets(ssh_keysign_t)
 ')
 
 #################################
@@ -270,7 +293,7 @@ optional_policy(`
 # so a tunnel can point to another ssh tunnel
 allow sshd_t self:netlink_route_socket r_netlink_socket_perms;
 allow sshd_t self:key { search link write };
-allow sshd_t self:process { setcurrent setcap };
+allow sshd_t self:process setcurrent;
 
 allow sshd_t sshd_keytab_t:file read_file_perms;
 
@@ -279,6 +302,7 @@ kernel_link_key(sshd_t)
 kernel_read_net_sysctls(sshd_t)
 
 files_search_all(sshd_t)
+files_create_home_dir(sshd_t)
 
 fs_search_cgroup_dirs(sshd_t)
 fs_rw_cgroup_files(sshd_t)
@@ -294,8 +318,6 @@ corenet_tcp_bind_xserver_port(sshd_t)
 corenet_tcp_bind_vnc_port(sshd_t)
 corenet_sendrecv_xserver_server_packets(sshd_t)
 
-sysnet_read_config(sshd_t)
-
 auth_exec_login_program(sshd_t)
 auth_signal_chk_passwd(sshd_t)
 
@@ -305,6 +327,7 @@ userdom_read_user_home_content_symlinks(sshd_t)
 userdom_spec_domtrans_unpriv_users(sshd_t)
 userdom_signal_unpriv_users(sshd_t)
 userdom_dyntransition_unpriv_users(sshd_t)
+userdom_map_tmp_files(sshd_t)
 
 tunable_policy(`ssh_sysadm_login',`
 	# Relabel and access ptys created by sshd
@@ -327,6 +350,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    cockpit_read_pid_files(sshd_t)
+')
+
+optional_policy(`
 	daemontools_service_domain(sshd_t, sshd_exec_t)
 ')
 
@@ -337,6 +364,10 @@ optional_policy(`
 
 optional_policy(`
 	gitosis_manage_lib_files(sshd_t)
+')
+
+optional_policy(`
+    gnome_exec_keyringd(sshd_t)
 ')
 
 optional_policy(`
@@ -365,6 +396,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+	rpc_rw_gssd_keys(sshd_t)
+')
+
+optional_policy(`
 	rpm_use_script_fds(sshd_t)
 ')
 
@@ -380,7 +415,6 @@ optional_policy(`
 
 optional_policy(`
 	systemd_exec_systemctl(sshd_t)
-	systemd_notify_write_socket(sshd_t)
 ')
 
 optional_policy(`
@@ -406,6 +440,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    sge_rw_tcp_sockets(sshd_t)
+')
+
+optional_policy(`
 	kernel_write_proc_files(sshd_t)
 	virt_transition_svirt_sandbox(sshd_t, system_r)
 	virt_stream_connect_sandbox(sshd_t)
@@ -414,6 +452,14 @@ optional_policy(`
 
 optional_policy(`
 	xserver_domtrans_xauth(sshd_t)
+    xserver_xdm_signull(sshd_t)
+')
+
+optional_policy(`
+    tunable_policy(`ssh_use_tcpd',`
+        tcpd_wrapped_domain(sshd_t,sshd_exec_t)
+        tcpd_rw_tcp_sockets(sshd_net_t)
+    ')
 ')
 
 ifdef(`TODO',`
@@ -451,12 +497,11 @@ allow sshd_keygen_t self:unix_stream_socket create_stream_socket_perms;
 allow sshd_keygen_t sshd_key_t:file manage_file_perms;
 
 kernel_read_system_state(sshd_keygen_t)
+kernel_dontaudit_request_load_module(sshd_keygen_t)
 
 corecmd_exec_bin(sshd_keygen_t)
 
-miscfiles_read_generic_certs(sshd_keygen_t)
-
-auth_read_passwd(sshd_keygen_t)
+auth_use_nsswitch(sshd_keygen_t)
 
 files_rw_etc_dirs(sshd_keygen_t)
 
@@ -464,6 +509,10 @@ files_rw_etc_dirs(sshd_keygen_t)
 seutil_domtrans_setfiles(sshd_keygen_t)
 
 ssh_domtrans_keygen(sshd_keygen_t)
+
+optional_policy(`
+    plymouthd_exec_plymouth(sshd_keygen_t)
+')
 
 ########################################
 #
@@ -473,7 +522,7 @@ ssh_domtrans_keygen(sshd_keygen_t)
 # ssh_keygen_t is the type of the ssh-keygen program when run at install time
 # and by sysadm_t
 
-allow ssh_keygen_t self:capability dac_override;
+allow ssh_keygen_t self:capability { dac_read_search  };
 dontaudit ssh_keygen_t self:capability sys_tty_config;
 allow ssh_keygen_t self:process { sigchld sigkill sigstop signull signal };
 allow ssh_keygen_t self:unix_stream_socket create_stream_socket_perms;
@@ -515,15 +564,9 @@ auth_use_nsswitch(ssh_keygen_t)
 
 logging_send_syslog_msg(ssh_keygen_t)
 
-miscfiles_read_generic_certs(ssh_keygen_t)
-
 userdom_home_manager(ssh_keygen_t)
 userdom_dontaudit_use_unpriv_user_fds(ssh_keygen_t)
 userdom_use_user_terminals(ssh_keygen_t)
-
-optional_policy(`
-    glusterd_manage_lib_files(ssh_keygen_t)
-')
 
 optional_policy(`
 	seutil_sigchld_newrole(ssh_keygen_t)
@@ -568,6 +611,8 @@ logging_send_audit_msgs(sshd_sandbox_t)
 allow sshd_t sshd_net_t:process signal;
 
 allow sshd_net_t self:process setrlimit;
+
+dev_rw_crypto(sshd_net_t)
 
 init_ioctl_stream_sockets(sshd_net_t)
 init_rw_tcp_sockets(sshd_net_t)
@@ -672,6 +717,10 @@ userdom_use_inherited_user_terminals(ssh_agent_type)
 
 # for the transition back to normal privs upon exec
 userdom_search_user_home_content(ssh_agent_type)
+
+optional_policy(`
+    cockpit_rw_pipes(ssh_agent_type)
+')
 
 optional_policy(`
 	xserver_use_xdm_fds(ssh_agent_type)

@@ -83,9 +83,10 @@ template(`sandbox_x_domain_template',`
 		attribute sandbox_x_domain;
 		attribute sandbox_tmpfs_type;
 		attribute sandbox_type;
+        attribute sandbox_web_type;
 	')
 
-	type $1_t, sandbox_x_domain, sandbox_type;
+	type $1_t, sandbox_x_domain, sandbox_type, sandbox_web_type;
 	application_type($1_t)
 	mcs_constrained($1_t)
 
@@ -115,8 +116,9 @@ template(`sandbox_x_domain_template',`
 	fs_tmpfs_filetrans($1_t, $1_client_tmpfs_t, file )
 	# Pulseaudio tmpfs files with different MCS labels
 	dontaudit $1_client_t $1_client_tmpfs_t:file { read write };
-	dontaudit $1_t $1_client_tmpfs_t:file { read write };
+	dontaudit $1_t $1_client_tmpfs_t:file { read write map };
 	allow sandbox_xserver_t $1_client_tmpfs_t:file { read write };
+	allow $1_client_t $1_client_tmpfs_t:file { map };
 
 	domtrans_pattern($1_t, xserver_exec_t, sandbox_xserver_t)
 	allow $1_t sandbox_xserver_t:process signal_perms;
@@ -131,6 +133,11 @@ template(`sandbox_x_domain_template',`
 	allow sandbox_xserver_t $1_t:shm rw_shm_perms;
 	allow $1_client_t $1_t:unix_stream_socket connectto;
 	allow $1_t $1_client_t:unix_stream_socket connectto;
+
+    #optional_policy(`
+	#    unconfined_typebounds($1_t)
+	#    unconfined_typebounds($1_client_t)
+    #')
 ')
 
 ########################################

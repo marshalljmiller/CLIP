@@ -9,11 +9,8 @@ type cyrus_t;
 type cyrus_exec_t;
 init_daemon_domain(cyrus_t, cyrus_exec_t)
 
-type cyrus_initrc_t;
-domain_type(cyrus_initrc_t)
-
 type cyrus_initrc_exec_t;
-init_domain(cyrus_initrc_t, cyrus_initrc_exec_t)
+init_script_file(cyrus_initrc_exec_t)
 
 type cyrus_keytab_t;
 files_type(cyrus_keytab_t)
@@ -32,7 +29,7 @@ files_pid_file(cyrus_var_run_t)
 # Local policy
 #
 
-allow cyrus_t self:capability { fsetid dac_override net_bind_service setgid setuid sys_resource };
+allow cyrus_t self:capability { fsetid dac_read_search dac_override net_bind_service setgid setuid sys_resource };
 dontaudit cyrus_t self:capability sys_tty_config;
 allow cyrus_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 allow cyrus_t self:process setrlimit;
@@ -45,10 +42,7 @@ allow cyrus_t self:msgq create_msgq_perms;
 allow cyrus_t self:msg { send receive };
 allow cyrus_t self:unix_dgram_socket sendto;
 allow cyrus_t self:unix_stream_socket { accept connectto listen };
-allow cyrus_t self:tcp_socket { accept listen bind create connect setopt getopt getattr shutdown };
-allow cyrus_t self:udp_socket { create connect getattr };
-# required for getifaddr in IPV6?
-allow cyrus_t self:netlink_route_socket { bind create getattr nlmsg_read write read };
+allow cyrus_t self:tcp_socket { accept listen };
 
 allow cyrus_t cyrus_keytab_t:file read_file_perms;
 
@@ -60,19 +54,26 @@ manage_dirs_pattern(cyrus_t, cyrus_var_lib_t, cyrus_var_lib_t)
 manage_files_pattern(cyrus_t, cyrus_var_lib_t, cyrus_var_lib_t)
 manage_lnk_files_pattern(cyrus_t, cyrus_var_lib_t, cyrus_var_lib_t)
 manage_sock_files_pattern(cyrus_t, cyrus_var_lib_t, cyrus_var_lib_t)
+allow cyrus_t cyrus_var_lib_t:file map;
 
 manage_files_pattern(cyrus_t, cyrus_var_run_t, cyrus_var_run_t)
+manage_dirs_pattern(cyrus_t, cyrus_var_run_t, cyrus_var_run_t)
 manage_sock_files_pattern(cyrus_t, cyrus_var_run_t, cyrus_var_run_t)
-files_pid_filetrans(cyrus_t, cyrus_var_run_t, { file sock_file })
+files_pid_filetrans(cyrus_t, cyrus_var_run_t, { dir file sock_file })
+allow cyrus_t cyrus_var_run_t:file map;
 
 kernel_read_kernel_sysctls(cyrus_t)
 kernel_read_system_state(cyrus_t)
 kernel_read_all_sysctls(cyrus_t)
+kernel_read_network_state(cyrus_t)
 
+corenet_all_recvfrom_netlabel(cyrus_t)
 corenet_tcp_sendrecv_generic_if(cyrus_t)
 corenet_tcp_sendrecv_generic_node(cyrus_t)
 corenet_tcp_sendrecv_all_ports(cyrus_t)
 corenet_tcp_bind_generic_node(cyrus_t)
+corenet_tcp_bind_cyrus_imapd_port(cyrus_t)
+corenet_tcp_bind_http_port(cyrus_t)
 
 corenet_sendrecv_mail_server_packets(cyrus_t)
 corenet_tcp_bind_mail_port(cyrus_t)
@@ -80,14 +81,17 @@ corenet_tcp_bind_mail_port(cyrus_t)
 corenet_sendrecv_lmtp_server_packets(cyrus_t)
 corenet_tcp_bind_lmtp_port(cyrus_t)
 
+corenet_sendrecv_innd_server_packets(cyrus_t)
+corenet_tcp_bind_innd_port(cyrus_t)
+
+corenet_sendrecv_pop_server_packets(cyrus_t)
+corenet_tcp_bind_pop_port(cyrus_t)
+
 corenet_sendrecv_sieve_server_packets(cyrus_t)
 corenet_tcp_bind_sieve_port(cyrus_t)
-sysnet_read_config(cyrus_t)
 
 corenet_sendrecv_all_client_packets(cyrus_t)
 corenet_tcp_connect_all_ports(cyrus_t)
-
-corenet_dontaudit_tcp_bind_pop_port(cyrus_t)
 
 corecmd_exec_bin(cyrus_t)
 
@@ -104,6 +108,8 @@ fs_getattr_all_fs(cyrus_t)
 fs_search_auto_mountpoints(cyrus_t)
 
 auth_use_nsswitch(cyrus_t)
+
+init_read_state(cyrus_t)
 
 libs_exec_lib_files(cyrus_t)
 
@@ -126,6 +132,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    gssproxy_stream_connect(cyrus_t)
+')
+
+optional_policy(`
 	kerberos_read_keytab(cyrus_t)
 	kerberos_use(cyrus_t)
 ')
@@ -145,50 +155,9 @@ optional_policy(`
 ')
 
 optional_policy(`
-	udev_read_db(cyrus_t)
+	systemd_private_tmp(cyrus_tmp_t)
 ')
 
-########################################
-#
-# cyrus_initrc_t Local policy
-#
-allow cyrus_initrc_t self:capability { setuid dac_read_search setgid net_admin audit_write dac_override };
-allow cyrus_initrc_t self:unix_dgram_socket { create connect };
-
-kernel_read_system_state(cyrus_initrc_t)
-
-dev_read_sysfs(cyrus_initrc_t)
-
-corecmd_exec_ls(cyrus_initrc_t)
-
-consoletype_domtrans(cyrus_initrc_t)
-
-hostname_domtrans(cyrus_initrc_t)
-
-auth_read_passwd(cyrus_initrc_t)
-
-dbus_read_pid_files(cyrus_initrc_t)
-dbus_send_system_bus(cyrus_initrc_t)
-dbus_system_bus_client(cyrus_initrc_t)
-init_dbus_chat(cyrus_initrc_t)
-
-init_read_state(cyrus_initrc_t)
-init_rw_stream_sockets(cyrus_initrc_t)
-init_read_pipes(cyrus_initrc_t)
-
-logging_send_syslog_msg(cyrus_initrc_t)
-
-# runuser
-systemd_dbus_chat_logind(cyrus_initrc_t)
-init_ioctl_stream_sockets(cyrus_initrc_t)
-systemd_write_inherited_logind_sessions_pipes(cyrus_initrc_t)
-allow cyrus_initrc_t self:netlink_audit_socket { write nlmsg_relay create read nlmsg_relay };
-allow cyrus_initrc_t self:process setsched;
-allow cyrus_initrc_t self:key write;
-
-allow cyrus_initrc_t cyrus_var_lib_t:file { rename write getattr read create unlink open };
-
-manage_files_pattern(cyrus_initrc_t, cyrus_var_run_t, cyrus_var_run_t)
-
-cyrus_stream_connect(cyrus_initrc_t)
-cyrus_manage_data(cyrus_initrc_t)
+optional_policy(`
+	udev_read_db(cyrus_t)
+')

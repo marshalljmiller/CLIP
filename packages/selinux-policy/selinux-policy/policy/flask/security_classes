@@ -196,7 +196,7 @@ class kcm_socket
 class qipcrtr_socket
 class smc_socket
 
-class bpf 
+class bpf
 
 class xdp_socket
 

@@ -55,6 +55,23 @@ interface(`ctdbd_signal',`
         allow $1 ctdbd_t:process signal;
 ')
 
+#######################################
+## <summary>
+##  Allow domain to sigchld ctdbd.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+interface(`ctdbd_sigchld',`
+    gen_require(`
+        type ctdbd_t;
+    ')
+        allow $1 ctdbd_t:process sigchld;
+')
+
 ########################################
 ## <summary>
 ##	Read ctdbd's log files.
@@ -113,25 +130,6 @@ interface(`ctdbd_manage_log',`
         manage_dirs_pattern($1, ctdbd_log_t, ctdbd_log_t)
         manage_files_pattern($1, ctdbd_log_t, ctdbd_log_t)
         manage_lnk_files_pattern($1, ctdbd_log_t, ctdbd_log_t)
-')
-
-########################################
-## <summary>
-##     Manage ctdbd lib files.
-## </summary>
-## <param name="domain">
-##     <summary>
-##     Domain allowed access.
-##     </summary>
-## </param>
-#
-interface(`ctdbd_manage_var_files',`
-       gen_require(`
-               type ctdbd_var_t;
-       ')
-
-       files_search_var_lib($1)
-    manage_files_pattern($1, ctdbd_var_t, ctdbd_var_t)
 ')
 
 ########################################

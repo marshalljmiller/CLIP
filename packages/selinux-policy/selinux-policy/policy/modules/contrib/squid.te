@@ -58,7 +58,7 @@ role system_r types squid_cron_t;
 # Local policy
 #
 
-allow squid_t self:capability { setgid kill setuid dac_override sys_resource };
+allow squid_t self:capability { setgid kill setuid dac_read_search  sys_resource };
 dontaudit squid_t self:capability sys_tty_config;
 allow squid_t self:process ~{ ptrace setcurrent setexec setfscreate execmem execstack execheap };
 allow squid_t self:fifo_file rw_fifo_file_perms;
@@ -75,6 +75,7 @@ manage_dirs_pattern(squid_t, squid_cache_t, squid_cache_t)
 manage_files_pattern(squid_t, squid_cache_t, squid_cache_t)
 manage_lnk_files_pattern(squid_t, squid_cache_t, squid_cache_t)
 files_var_filetrans(squid_t, squid_cache_t, dir, "squid")
+filetrans_pattern(squid_t, squid_conf_t, squid_cache_t, dir, "ssl_db")
 
 allow squid_t squid_conf_t:dir list_dir_perms;
 allow squid_t squid_conf_t:file read_file_perms;
@@ -88,6 +89,7 @@ logging_log_filetrans(squid_t, squid_log_t, { file dir })
 manage_files_pattern(squid_t, squid_tmpfs_t, squid_tmpfs_t)
 manage_dirs_pattern(squid_t, squid_tmpfs_t, squid_tmpfs_t)
 fs_tmpfs_filetrans(squid_t, squid_tmpfs_t, { dir file })
+allow squid_t squid_tmpfs_t:file map;
 
 manage_dirs_pattern(squid_t, squid_tmp_t, squid_tmp_t)
 manage_files_pattern(squid_t, squid_tmp_t, squid_tmp_t)
@@ -181,6 +183,7 @@ auth_use_nsswitch(squid_t)
 auth_domtrans_chk_passwd(squid_t)
 
 libs_exec_lib_files(squid_t)
+libs_exec_ldconfig(squid_t)
 
 logging_send_syslog_msg(squid_t)
 

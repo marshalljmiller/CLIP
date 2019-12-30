@@ -54,6 +54,8 @@ files_config_file(krb5kdc_conf_t)
 type krb5kdc_lock_t;
 files_lock_file(krb5kdc_lock_t)
 
+type krb5kdc_var_lib_t;
+files_type(krb5kdc_var_lib_t)
 
 # types for KDC principal file(s)
 type krb5kdc_principal_t;
@@ -79,7 +81,7 @@ files_pid_file(krb5kdc_var_run_t)
 #
 
 # Use capabilities. Surplus capabilities may be allowed.
-allow kadmind_t self:capability { setuid setgid chown fowner dac_override sys_nice };
+allow kadmind_t self:capability { setuid setgid chown fowner dac_read_search  sys_nice };
 allow kadmind_t self:capability2 block_suspend;
 dontaudit kadmind_t self:capability sys_tty_config;
 allow kadmind_t self:process { setfscreate setsched getsched signal_perms };
@@ -98,8 +100,10 @@ manage_files_pattern(kadmind_t, krb5kdc_conf_t, krb5kdc_conf_t)
 
 allow kadmind_t krb5kdc_lock_t:file { rw_file_perms setattr_file_perms };
 
-allow kadmind_t krb5kdc_principal_t:file manage_file_perms;
+allow kadmind_t krb5kdc_principal_t:file { manage_file_perms map };
 filetrans_pattern(kadmind_t, krb5kdc_conf_t, krb5kdc_principal_t, file)
+
+allow kadmind_t krb5_keytab_t:file read_file_perms;
 
 can_exec(kadmind_t, kadmind_exec_t)
 
@@ -136,6 +140,7 @@ corenet_tcp_bind_reserved_port(kadmind_t)
 corenet_dontaudit_tcp_bind_all_reserved_ports(kadmind_t)
 corenet_sendrecv_kerberos_admin_server_packets(kadmind_t)
 corenet_sendrecv_kerberos_password_server_packets(kadmind_t)
+corenet_tcp_bind_kprop_port(kadmind_t)
 corenet_tcp_connect_kprop_port(kadmind_t)
 
 dev_read_sysfs(kadmind_t)
@@ -148,6 +153,7 @@ fs_rw_anon_inodefs_files(kadmind_t)
 
 domain_use_interactive_fds(kadmind_t)
 
+files_read_etc_files(kadmind_t)
 files_read_usr_symlinks(kadmind_t)
 files_read_var_files(kadmind_t)
 
@@ -158,6 +164,8 @@ auth_read_passwd(kadmind_t)
 logging_send_syslog_msg(kadmind_t)
 
 miscfiles_read_generic_certs(kadmind_t)
+miscfiles_read_localization(kadmind_t)
+miscfiles_read_pkcs11_modules(kadmind_t)
 
 seutil_read_config(kadmind_t)
 seutil_read_file_contexts(kadmind_t)
@@ -169,11 +177,19 @@ userdom_dontaudit_use_unpriv_user_fds(kadmind_t)
 userdom_dontaudit_search_user_home_dirs(kadmind_t)
 
 optional_policy(`
+	bind_read_cache(kadmind_t)
+')
+
+optional_policy(`
 	ldap_stream_connect(kadmind_t)
 ')
 
 optional_policy(`
 	dirsrv_stream_connect(kadmind_t)
+')
+
+optional_policy(`
+    gnome_read_home_config(kadmind_t)
 ')
 
 optional_policy(`
@@ -199,7 +215,7 @@ optional_policy(`
 #
 
 # Use capabilities. Surplus capabilities may be allowed.
-allow krb5kdc_t self:capability { setuid setgid net_admin chown fowner dac_override sys_nice };
+allow krb5kdc_t self:capability { setuid setgid net_admin chown fowner dac_read_search  sys_nice };
 allow krb5kdc_t self:capability2 block_suspend;
 dontaudit krb5kdc_t self:capability sys_tty_config;
 allow krb5kdc_t self:process { setfscreate setsched getsched signal_perms };
@@ -213,6 +229,7 @@ dontaudit krb5kdc_t krb5_conf_t:file write;
 
 can_exec(krb5kdc_t, krb5kdc_exec_t)
 
+list_dirs_pattern(krb5kdc_t, krb5kdc_conf_t, krb5kdc_conf_t)
 read_files_pattern(krb5kdc_t, krb5kdc_conf_t, krb5kdc_conf_t)
 dontaudit krb5kdc_t krb5kdc_conf_t:file write;
 
@@ -231,6 +248,9 @@ manage_files_pattern(krb5kdc_t, krb5kdc_var_run_t, krb5kdc_var_run_t)
 manage_sock_files_pattern(krb5kdc_t, krb5kdc_var_run_t, krb5kdc_var_run_t)
 manage_dirs_pattern(krb5kdc_t, krb5kdc_var_run_t, krb5kdc_var_run_t)
 files_pid_filetrans(krb5kdc_t, krb5kdc_var_run_t, { dir file sock_file })
+
+manage_files_pattern(krb5kdc_t, krb5kdc_var_lib_t, krb5kdc_var_lib_t)
+manage_dirs_pattern(krb5kdc_t, krb5kdc_var_lib_t, krb5kdc_var_lib_t)
 
 kernel_read_system_state(krb5kdc_t)
 kernel_read_kernel_sysctls(krb5kdc_t)
@@ -270,7 +290,7 @@ files_read_var_files(krb5kdc_t)
 
 selinux_validate_context(krb5kdc_t)
 
-auth_read_passwd(krb5kdc_t)
+auth_use_nsswitch(krb5kdc_t)
 
 logging_send_syslog_msg(krb5kdc_t)
 
@@ -298,6 +318,10 @@ optional_policy(`
 
 optional_policy(`
 	nis_use_ypbind(krb5kdc_t)
+')
+
+optional_policy(`
+	realmd_read_var_lib(krb5kdc_t)
 ')
 
 optional_policy(`
@@ -334,12 +358,16 @@ manage_files_pattern(kpropd_t, krb5kdc_conf_t, krb5kdc_lock_t)
 filetrans_pattern(kpropd_t, krb5kdc_conf_t, krb5kdc_lock_t, file)
 
 manage_files_pattern(kpropd_t, krb5kdc_conf_t, krb5kdc_principal_t)
+allow kpropd_t krb5kdc_principal_t:file map;
 
 manage_dirs_pattern(kpropd_t, krb5kdc_tmp_t, krb5kdc_tmp_t)
 manage_files_pattern(kpropd_t, krb5kdc_tmp_t, krb5kdc_tmp_t)
 files_tmp_filetrans(kpropd_t, krb5kdc_tmp_t, { file dir })
 
 kernel_read_system_state(kpropd_t)
+kernel_read_network_state(kpropd_t)
+
+can_exec(kpropd_t,kpropd_exec_t)
 
 corecmd_exec_bin(kpropd_t)
 
@@ -348,6 +376,7 @@ corenet_tcp_sendrecv_generic_node(kpropd_t)
 corenet_tcp_sendrecv_all_ports(kpropd_t)
 corenet_tcp_bind_generic_node(kpropd_t)
 corenet_tcp_bind_kprop_port(kpropd_t)
+corenet_tcp_connect_kprop_port(kpropd_t)
 
 dev_read_urand(kpropd_t)
 

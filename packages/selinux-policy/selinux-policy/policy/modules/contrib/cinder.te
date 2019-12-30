@@ -124,6 +124,8 @@ allow cinder_backup_t self:udp_socket create_socket_perms;
 
 auth_use_nsswitch(cinder_backup_t)
 
+systemd_dbus_chat_logind(cinder_backup_t)
+
 optional_policy(`
     unconfined_domain(cinder_backup_t)
 ')
@@ -156,6 +158,8 @@ allow cinder_volume_t self:udp_socket create_socket_perms;
 kernel_read_kernel_sysctls(cinder_volume_t)
 
 logging_send_syslog_msg(cinder_volume_t)
+
+systemd_dbus_chat_logind(cinder_volume_t)
 
 optional_policy(`
 	lvm_domtrans(cinder_volume_t)

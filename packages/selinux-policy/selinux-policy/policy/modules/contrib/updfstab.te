@@ -14,7 +14,7 @@ init_system_domain(updfstab_t, updfstab_exec_t)
 # Local policy
 #
 
-allow updfstab_t self:capability dac_override;
+allow updfstab_t self:capability { dac_read_search   };
 dontaudit updfstab_t self:capability { sys_admin sys_tty_config };
 allow updfstab_t self:process signal_perms;
 allow updfstab_t self:fifo_file rw_fifo_file_perms;
@@ -96,7 +96,7 @@ optional_policy(`
 
 optional_policy(`
 	modutils_read_module_config(updfstab_t)
-	modutils_exec_insmod(updfstab_t)
+	modutils_exec_kmod(updfstab_t)
 	modutils_read_module_deps(updfstab_t)
 ')
 

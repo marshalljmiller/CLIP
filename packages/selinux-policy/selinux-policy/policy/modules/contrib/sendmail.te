@@ -26,22 +26,21 @@ type sendmail_var_run_t;
 files_pid_file(sendmail_var_run_t)
 
 type sendmail_t;
-domain_type(sendmail_t)
-#mta_sendmail_mailserver(sendmail_t)
+mta_sendmail_mailserver(sendmail_t)
 mta_mailserver_delivery(sendmail_t)
 mta_mailserver_sender(sendmail_t)
 role sendmail_roles types sendmail_t;
 
-#type unconfined_sendmail_t;
-#application_domain(unconfined_sendmail_t, sendmail_exec_t)
-#role sendmail_unconfined_roles types unconfined_sendmail_t;
+type unconfined_sendmail_t;
+application_domain(unconfined_sendmail_t, sendmail_exec_t)
+role sendmail_unconfined_roles types unconfined_sendmail_t;
 
 ########################################
 #
 # Sendmail local policy
 #
 
-allow sendmail_t self:capability { dac_override setuid setgid net_bind_service sys_nice chown sys_tty_config };
+allow sendmail_t self:capability { dac_read_search dac_override setuid setgid net_bind_service sys_nice chown sys_tty_config };
 dontaudit sendmail_t self:capability net_admin;
 dontaudit sendmail_t self:capability2 block_suspend;
 allow sendmail_t self:process { setsched setpgid setrlimit signal signull };
@@ -68,6 +67,9 @@ kernel_read_network_state(sendmail_t)
 kernel_read_kernel_sysctls(sendmail_t)
 # for piping mail to a command
 kernel_read_system_state(sendmail_t)
+kernel_search_network_sysctl(sendmail_t)
+kernel_read_kernel_sysctls(sendmail_t)
+kernel_read_net_sysctls(sendmail_t)
 
 corenet_all_recvfrom_netlabel(sendmail_t)
 corenet_tcp_sendrecv_generic_if(sendmail_t)
@@ -124,6 +126,7 @@ userdom_dontaudit_list_user_home_dirs(sendmail_t)
 mta_read_config(sendmail_t)
 mta_etc_filetrans_aliases(sendmail_t)
 # Write to /etc/aliases and /etc/mail.
+mta_map_aliases(sendmail_t)
 mta_manage_aliases(sendmail_t)
 # Write to /var/spool/mail and /var/spool/mqueue.
 mta_manage_queue(sendmail_t)
@@ -145,6 +148,10 @@ optional_policy(`
 
 optional_policy(`
 	cyrus_stream_connect(sendmail_t)
+')
+
+optional_policy(`
+    dbus_system_bus_client(sendmail_t)
 ')
 
 optional_policy(`
@@ -174,10 +181,6 @@ optional_policy(`
 
 optional_policy(`
 	milter_stream_connect_all(sendmail_t)
-')
-
-optional_policy(`
-    mta_filetrans_home_content(sendmail_t)
 ')
 
 optional_policy(`
@@ -227,9 +230,7 @@ optional_policy(`
 # Unconfined local policy
 #
 
-#optional_policy(`
-#    mta_etc_filetrans_aliases(unconfined_sendmail_t, "aliases")
-#    mta_etc_filetrans_aliases(unconfined_sendmail_t, "aliases.db")
-#    mta_etc_filetrans_aliases(unconfined_sendmail_t, "aliasesdb-stamp")
-#    unconfined_domain(unconfined_sendmail_t)
-#')
+optional_policy(`
+	mta_filetrans_named_content(unconfined_sendmail_t)
+	unconfined_domain(unconfined_sendmail_t)
+')

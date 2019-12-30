@@ -1,3 +1,4 @@
+/usr/sbin/corosync-qdevice	--	gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/dlm_controld			--	gen_context(system_u:object_r:dlm_controld_exec_t,s0)
 /usr/sbin/fenced			    --	gen_context(system_u:object_r:fenced_exec_t,s0)
 /usr/sbin/fence_node			--	gen_context(system_u:object_r:fenced_exec_t,s0)
@@ -12,6 +13,8 @@
 /usr/sbin/qdiskd			    --	gen_context(system_u:object_r:qdiskd_exec_t,s0)
 
 /usr/lib/systemd/system/haproxy.*     --  gen_context(system_u:object_r:haproxy_unit_file_t,s0)
+
+/usr/lib/systemd/systemd-fence_sanlockd		--	gen_context(system_u:object_r:fenced_exec_t,s0)
 
 /var/lock/fence_manual\.lock		--	gen_context(system_u:object_r:fenced_lock_t,s0)
 
@@ -28,6 +31,7 @@
 
 /var/run/cluster/fenced_override	--	gen_context(system_u:object_r:fenced_var_run_t,s0)
 /var/run/cluster/fence_scsi.*           --       gen_context(system_u:object_r:fenced_var_run_t,s0)
+/var/run/cluster/mpath\.devices     --  gen_context(system_u:object_r:fenced_var_run_t,s0)
 /var/run/dlm_controld\.pid		--	gen_context(system_u:object_r:dlm_controld_var_run_t,s0)
 /var/run/dlm_controld(/.*)?		    gen_context(system_u:object_r:dlm_controld_var_run_t,s0)
 /var/run/fence.*				    gen_context(system_u:object_r:fenced_var_run_t,s0)
@@ -35,7 +39,7 @@
 /var/run/groupd\.pid			--	gen_context(system_u:object_r:groupd_var_run_t,s0)
 /var/run/haproxy\.pid           --  gen_context(system_u:object_r:haproxy_var_run_t,s0)
 /var/run/haproxy\.stat.*        --  gen_context(system_u:object_r:haproxy_var_run_t,s0)
-/var/run/haproxy\.sock.*        --  gen_context(system_u:object_r:haproxy_var_run_t,s0)
+/var/run/haproxy\.sock.*        -s  gen_context(system_u:object_r:haproxy_var_run_t,s0)
 /var/run/qdiskd\.pid			--	gen_context(system_u:object_r:qdiskd_var_run_t,s0)
 
 # cluster administrative domains file spec
@@ -47,12 +51,16 @@
 /etc/rc\.d/init\.d/pacemaker    --  gen_context(system_u:object_r:cluster_initrc_exec_t,s0)
 
 /usr/lib/systemd/system/corosync.*  -- gen_context(system_u:object_r:cluster_unit_file_t,s0)
+/usr/lib/systemd/system/corosync-qnetd.*  -- gen_context(system_u:object_r:cluster_unit_file_t,s0)
+/usr/lib/systemd/system/corosync-qdevice.*  -- gen_context(system_u:object_r:cluster_unit_file_t,s0)
+
 /usr/lib/systemd/system/pacemaker.* --  gen_context(system_u:object_r:cluster_unit_file_t,s0)
 /usr/lib/systemd/system/pcsd.*      --  gen_context(system_u:object_r:cluster_unit_file_t,s0)
 
 /usr/sbin/aisexec   		--  gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/corosync  		--  gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/corosync-notifyd  --  gen_context(system_u:object_r:cluster_exec_t,s0)
+/usr/bin/corosync-qnetd		--	gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/cpglockd			--	gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/ccs_tool      	--  gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/cman_tool     	--  gen_context(system_u:object_r:cluster_exec_t,s0)
@@ -60,8 +68,17 @@
 /usr/sbin/rgmanager         --  gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/pacemakerd    	--  gen_context(system_u:object_r:cluster_exec_t,s0)
 /usr/sbin/pacemaker_remoted --  gen_context(system_u:object_r:cluster_exec_t,s0)
+/usr/sbin/pacemaker-remoted --  gen_context(system_u:object_r:cluster_exec_t,s0)
+/usr/sbin/pcsd              --  gen_context(system_u:object_r:cluster_exec_t,s0)
 
 /usr/share/corosync/corosync    --  gen_context(system_u:object_r:cluster_exec_t,s0)
+/usr/share/corosync/corosync-qdevice	--	gen_context(system_u:object_r:cluster_exec_t,s0)
+
+/usr/share/cluster/fence_scsi_check\.pl   --  gen_context(system_u:object_r:fenced_exec_t,s0)
+/usr/share/cluster/fence_scsi_check   --  gen_context(system_u:object_r:fenced_exec_t,s0)
+/usr/share/cluster/fence_scsi_check_hardreboot     --  gen_context(system_u:object_r:fenced_exec_t,s0)
+/usr/share/cluster/fence_mpath_check   --  gen_context(system_u:object_r:fenced_exec_t,s0)
+/usr/share/cluster/fence_mpath_check_hardreboot    --  gen_context(system_u:object_r:fenced_exec_t,s0)
 
 /usr/lib/pcsd/pcsd          --  gen_context(system_u:object_r:cluster_exec_t,s0)
 
@@ -83,10 +100,14 @@
 /var/run/heartbeat(/.*)?            gen_context(system_u:object_r:cluster_var_run_t,s0)
 /var/run/rgmanager\.pid         --  gen_context(system_u:object_r:cluster_var_run_t,s0)
 /var/run/rsctmp(/.*)?   			gen_context(system_u:object_r:cluster_var_run_t,s0)
+/var/run/corosync-qdevice(/.*)?	gen_context(system_u:object_r:cluster_var_run_t,s0)
+/var/run/corosync-qnetd(/.*)?	gen_context(system_u:object_r:cluster_var_run_t,s0)
+
 
 /var/log/cluster/aisexec\.log.* --  gen_context(system_u:object_r:cluster_var_log_t,s0)
 /var/log/cluster/cpglockd\.log.*        --      gen_context(system_u:object_r:cluster_var_log_t,s0)
 /var/log/cluster/corosync\.log.*    --  gen_context(system_u:object_r:cluster_var_log_t,s0)
 /var/log/cluster/rgmanager\.log.*       --  gen_context(system_u:object_r:cluster_var_log_t,s0)
-/var/log/pacemaker\.log.*           --  gen_context(system_u:object_r:cluster_var_log_t,s0) 
+/var/log/pacemaker\.log.*           --  gen_context(system_u:object_r:cluster_var_log_t,s0)
+/var/log/pacemaker(/.*)?     gen_context(system_u:object_r:cluster_var_log_t,s0)
 /var/log/pcsd(/.*)?     gen_context(system_u:object_r:cluster_var_log_t,s0)

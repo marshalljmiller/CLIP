@@ -18,7 +18,7 @@ gen_tunable(named_tcp_bind_http_port, false)
 ##	Generally this is used for dynamic DNS or zone transfers.
 ##	</p>
 ## </desc>
-gen_tunable(named_write_master_zones, false)
+gen_tunable(named_write_master_zones, true)
 
 attribute_role ndc_roles;
 
@@ -74,16 +74,13 @@ role ndc_roles types ndc_t;
 # Local policy
 #
 
-allow named_t self:capability { chown dac_override fowner net_admin setgid setuid sys_chroot sys_nice sys_resource };
+allow named_t self:capability { chown dac_read_search dac_override fowner kill net_admin net_raw setgid setuid sys_chroot sys_nice sys_resource };
 dontaudit named_t self:capability sys_tty_config;
 allow named_t self:capability2 block_suspend;
 allow named_t self:process { setsched getcap setcap setrlimit signal_perms };
 allow named_t self:fifo_file rw_fifo_file_perms;
 allow named_t self:unix_stream_socket { accept listen };
-allow named_t self:tcp_socket { accept listen accept getattr setopt create bind };
-allow named_t self:udp_socket { getattr setopt bind create ioctl connect getopt };
-# getifaddr ipv6?
-allow named_t self:netlink_route_socket { bind create getattr read write nlmsg_read };
+allow named_t self:tcp_socket { accept listen };
 
 allow named_t dnssec_t:file read_file_perms;
 
@@ -91,6 +88,7 @@ allow named_t named_conf_t:dir list_dir_perms;
 read_files_pattern(named_t, named_conf_t, named_conf_t)
 read_lnk_files_pattern(named_t, named_conf_t, named_conf_t)
 
+manage_dirs_pattern(named_t, named_cache_t, named_cache_t)
 manage_files_pattern(named_t, named_cache_t, named_cache_t)
 manage_lnk_files_pattern(named_t, named_cache_t, named_cache_t)
 
@@ -117,6 +115,7 @@ read_lnk_files_pattern(named_t, named_zone_t, named_zone_t)
 kernel_read_kernel_sysctls(named_t)
 kernel_read_system_state(named_t)
 kernel_read_network_state(named_t)
+kernel_read_net_sysctls(named_t)
 
 corecmd_search_bin(named_t)
 
@@ -131,9 +130,15 @@ corenet_udp_bind_generic_node(named_t)
 corenet_sendrecv_all_server_packets(named_t)
 corenet_tcp_bind_dns_port(named_t)
 corenet_udp_bind_dns_port(named_t)
+corenet_udp_bind_ipp_port(named_t)
+corenet_udp_bind_rtsp_port(named_t)
+corenet_udp_bind_dhcpc_port(named_t)
+corenet_udp_bind_kerberos_port(named_t)
+corenet_udp_bind_flash_port(named_t)
+corenet_udp_bind_bgp_port(named_t)
 corenet_tcp_sendrecv_dns_port(named_t)
 corenet_udp_sendrecv_dns_port(named_t)
-
+corenet_udp_bind_whois_port(named_t)
 corenet_tcp_bind_rndc_port(named_t)
 corenet_tcp_sendrecv_rndc_port(named_t)
 
@@ -145,7 +150,8 @@ corenet_sendrecv_all_client_packets(named_t)
 corenet_tcp_connect_all_ports(named_t)
 corenet_tcp_sendrecv_all_ports(named_t)
 
-sysnet_dns_name_resolve(named_t)
+corenet_tcp_bind_all_ephemeral_ports(named_t)
+corenet_udp_bind_all_ephemeral_ports(named_t)
 
 dev_read_sysfs(named_t)
 dev_read_rand(named_t)
@@ -155,6 +161,7 @@ dev_dontaudit_write_urand(named_t)
 domain_use_interactive_fds(named_t)
 
 files_read_etc_runtime_files(named_t)
+files_mmap_usr_files(named_t)
 
 fs_getattr_all_fs(named_t)
 fs_search_auto_mountpoints(named_t)
@@ -207,6 +214,10 @@ optional_policy(`
 ')
 
 optional_policy(`
+    ipa_manage_lib(named_t)
+')
+
+optional_policy(`
     ipsec_rw_inherited_pipes(named_t)
 ')
 
@@ -240,7 +251,7 @@ optional_policy(`
 # NDC local policy
 #
 
-allow ndc_t self:capability { dac_override net_admin };
+allow ndc_t self:capability { dac_read_search  net_admin };
 allow ndc_t self:capability2 block_suspend;
 allow ndc_t self:process { fork signal_perms };
 allow ndc_t self:fifo_file rw_fifo_file_perms;

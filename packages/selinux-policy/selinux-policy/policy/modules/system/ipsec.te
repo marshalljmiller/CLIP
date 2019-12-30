@@ -70,12 +70,17 @@ type setkey_exec_t;
 init_system_domain(setkey_t, setkey_exec_t)
 role system_r types setkey_t;
 
+# The NetworkManager helper communicates the password via PTY
+type ipsec_mgmt_devpts_t;
+term_pty(ipsec_mgmt_devpts_t)
+files_type(ipsec_mgmt_devpts_t)
+
 ########################################
 #
 # ipsec Local policy
 #
 
-allow ipsec_t self:capability { net_admin dac_override dac_read_search setpcap sys_nice net_raw setuid setgid };
+allow ipsec_t self:capability { net_admin dac_read_search dac_override setpcap sys_nice net_raw setuid setgid };
 dontaudit ipsec_t self:capability sys_tty_config;
 allow ipsec_t self:process { getcap setcap getsched signal signull setsched sigkill };
 allow ipsec_t self:tcp_socket create_stream_socket_perms;
@@ -87,6 +92,7 @@ allow ipsec_t self:netlink_xfrm_socket { create_netlink_socket_perms nlmsg_write
 allow ipsec_t self:netlink_selinux_socket create_socket_perms;
 allow ipsec_t self:unix_stream_socket { create_stream_socket_perms connectto };
 allow ipsec_t self:netlink_route_socket { create_netlink_socket_perms write };
+allow ipsec_t self:tun_socket create_socket_perms;
 
 allow ipsec_t ipsec_initrc_exec_t:file read_file_perms;
 
@@ -98,6 +104,7 @@ filetrans_pattern(ipsec_t, ipsec_conf_file_t, ipsec_key_file_t, file, "ipsec.sec
 allow ipsec_t ipsec_key_file_t:dir list_dir_perms;
 read_lnk_files_pattern(ipsec_t, ipsec_key_file_t, ipsec_key_file_t)
 manage_files_pattern(ipsec_t, ipsec_key_file_t, ipsec_key_file_t)
+allow ipsec_t ipsec_key_file_t:file map;
 
 manage_files_pattern(ipsec_t, ipsec_log_t, ipsec_log_t)
 logging_log_filetrans(ipsec_t, ipsec_log_t, file, "pluto.log")
@@ -105,19 +112,24 @@ logging_log_filetrans(ipsec_t, ipsec_log_t, file, "pluto.log")
 manage_dirs_pattern(ipsec_t, ipsec_tmp_t, ipsec_tmp_t)
 manage_files_pattern(ipsec_t, ipsec_tmp_t, ipsec_tmp_t)
 files_tmp_filetrans(ipsec_t, ipsec_tmp_t, { dir file })
+allow ipsec_t ipsec_tmp_t:file { execute map };
 
 manage_dirs_pattern(ipsec_t, ipsec_var_run_t, ipsec_var_run_t)
 manage_files_pattern(ipsec_t, ipsec_var_run_t, ipsec_var_run_t)
 manage_sock_files_pattern(ipsec_t, ipsec_var_run_t, ipsec_var_run_t)
 files_pid_filetrans(ipsec_t, ipsec_var_run_t, { dir file sock_file })
+allow ipsec_t ipsec_var_run_t:file { map };
 
 can_exec(ipsec_t, ipsec_mgmt_exec_t)
+can_exec(ipsec_t, ipsec_exec_t)
 
 # pluto runs an updown script (by calling popen()!) as this is by default
 # a shell script, we need to find a way to make things work without
 # letting all sorts of stuff possibly be run...
 # so try flipping back into the ipsec_mgmt_t domain
 corecmd_shell_domtrans(ipsec_t, ipsec_mgmt_t)
+allow ipsec_t ipsec_mgmt_t:process2 nnp_transition;
+
 allow ipsec_mgmt_t ipsec_t:fd use;
 allow ipsec_mgmt_t ipsec_t:fifo_file rw_fifo_file_perms;
 allow ipsec_mgmt_t ipsec_t:unix_stream_socket { read write };
@@ -125,6 +137,7 @@ allow ipsec_mgmt_t ipsec_t:process { rlimitinh sigchld signull };
 
 kernel_read_kernel_sysctls(ipsec_t)
 kernel_rw_net_sysctls(ipsec_t)
+kernel_read_fs_sysctls(ipsec_t)
 kernel_list_proc(ipsec_t)
 kernel_read_proc_symlinks(ipsec_t)
 # allow pluto to access /proc/net/ipsec_eroute;
@@ -156,6 +169,8 @@ corenet_sendrecv_isakmp_server_packets(ipsec_t)
 corenet_tcp_connect_http_port(ipsec_t)
 corenet_tcp_connect_ldap_port(ipsec_t)
 
+corenet_rw_tun_tap_dev(ipsec_t)
+
 dev_read_sysfs(ipsec_t)
 dev_read_rand(ipsec_t)
 dev_read_urand(ipsec_t)
@@ -166,6 +181,7 @@ files_list_tmp(ipsec_t)
 files_read_etc_files(ipsec_t)
 files_read_usr_files(ipsec_t)
 files_dontaudit_search_home(ipsec_t)
+files_dontaudit_write_all_files(ipsec_t)
 
 fs_getattr_all_fs(ipsec_t)
 fs_search_auto_mountpoints(ipsec_t)
@@ -175,6 +191,7 @@ selinux_compute_access_vector(ipsec_t)
 term_use_console(ipsec_t)
 term_dontaudit_use_all_ttys(ipsec_t)
 
+auth_use_pam(ipsec_t)
 auth_use_nsswitch(ipsec_t)
 auth_read_home_content(ipsec_t)
 
@@ -184,15 +201,28 @@ init_use_script_ptys(ipsec_t)
 logging_send_audit_msgs(ipsec_t)
 logging_send_syslog_msg(ipsec_t)
 
+miscfiles_map_generic_certs(ipsec_t)
+
 sysnet_domtrans_ifconfig(ipsec_t)
+sysnet_exec_ifconfig(ipsec_t)
+sysnet_nnp_domtrans_ifconfig(ipsec_t)
 sysnet_manage_config(ipsec_t)
 sysnet_etc_filetrans_config(ipsec_t)
 
 userdom_dontaudit_use_unpriv_user_fds(ipsec_t)
 userdom_dontaudit_search_user_home_dirs(ipsec_t)
+userdom_read_home_certs(ipsec_t)
+
+optional_policy(`
+    bind_read_cache(ipsec_t)
+')
 
 optional_policy(`
     iptables_domtrans(ipsec_t)
+')
+
+optional_policy(`
+    l2tpd_read_pid_files(ipsec_t)
 ')
 
 optional_policy(`
@@ -203,12 +233,25 @@ optional_policy(`
 	udev_read_db(ipsec_t)
 ')
 
+optional_policy(`
+	dbus_system_bus_client(ipsec_t)
+	dbus_connect_system_bus(ipsec_t)
+
+    optional_policy(`
+        systemd_dbus_chat_resolved(ipsec_t)
+    ')
+
+	optional_policy(`
+		networkmanager_dbus_chat(ipsec_t)
+	')
+')
+
 ########################################
 #
 # ipsec_mgmt Local policy
 #
 
-allow ipsec_mgmt_t self:capability { dac_override dac_read_search net_admin setpcap sys_nice sys_ptrace };
+allow ipsec_mgmt_t self:capability { dac_read_search dac_override net_admin setpcap sys_nice sys_ptrace };
 dontaudit ipsec_mgmt_t self:capability sys_tty_config;
 allow ipsec_mgmt_t self:process { getsched setrlimit setsched signal };
 allow ipsec_mgmt_t self:unix_stream_socket { create_stream_socket_perms connectto };
@@ -216,6 +259,8 @@ allow ipsec_mgmt_t self:tcp_socket create_stream_socket_perms;
 allow ipsec_mgmt_t self:udp_socket create_socket_perms;
 allow ipsec_mgmt_t self:key_socket create_socket_perms;
 allow ipsec_mgmt_t self:fifo_file rw_fifo_file_perms;
+allow ipsec_mgmt_t self:netlink_xfrm_socket { create_netlink_socket_perms nlmsg_read };
+allow ipsec_mgmt_t self:netlink_route_socket { create_netlink_socket_perms };
 
 allow ipsec_mgmt_t ipsec_mgmt_lock_t:file manage_file_perms;
 files_lock_filetrans(ipsec_mgmt_t, ipsec_mgmt_lock_t, file)
@@ -227,7 +272,7 @@ files_tmp_filetrans(ipsec_mgmt_t, ipsec_tmp_t, { dir file })
 manage_files_pattern(ipsec_mgmt_t, ipsec_log_t, ipsec_log_t)
 logging_log_filetrans(ipsec_mgmt_t, ipsec_log_t, file)
 
-allow ipsec_mgmt_t ipsec_mgmt_var_run_t:file manage_file_perms;
+allow ipsec_mgmt_t ipsec_mgmt_var_run_t:file { map manage_file_perms };
 files_pid_filetrans(ipsec_mgmt_t, ipsec_mgmt_var_run_t, file)
 filetrans_pattern(ipsec_mgmt_t, ipsec_var_run_t, ipsec_mgmt_var_run_t, file)
 
@@ -246,6 +291,8 @@ read_lnk_files_pattern(ipsec_mgmt_t, ipsec_t, ipsec_t)
 # logger, running in ipsec_mgmt_t needs to use sockets
 allow ipsec_mgmt_t self:unix_dgram_socket { create connect write };
 allow ipsec_mgmt_t ipsec_t:unix_dgram_socket { create connect write };
+
+allow ipsec_mgmt_t ipsec_t:process { signal };
 
 allow ipsec_mgmt_t ipsec_conf_file_t:file read_file_perms;
 
@@ -268,6 +315,9 @@ kernel_read_software_raid_state(ipsec_mgmt_t)
 kernel_read_kernel_sysctls(ipsec_mgmt_t)
 kernel_getattr_core_if(ipsec_mgmt_t)
 kernel_getattr_message_if(ipsec_mgmt_t)
+
+# There is bug in kernel in 4.16 where lot of domains requesting module_request, for now dontauditing
+kernel_dontaudit_request_load_module(ipsec_mgmt_t)
 
 domain_dontaudit_getattr_all_sockets(ipsec_mgmt_t)
 domain_dontaudit_getattr_all_pipes(ipsec_mgmt_t)
@@ -308,10 +358,12 @@ files_list_kernel_modules(ipsec_mgmt_t)
 files_read_usr_files(ipsec_mgmt_t)
 files_dontaudit_getattr_default_dirs(ipsec_mgmt_t)
 files_dontaudit_getattr_default_files(ipsec_mgmt_t)
+files_dontaudit_write_all_mountpoints(ipsec_mgmt_t)
 files_list_tmp(ipsec_mgmt_t)
 
 fs_getattr_xattr_fs(ipsec_mgmt_t)
 fs_list_tmpfs(ipsec_mgmt_t)
+fs_dontaudit_write_configfs_dirs(ipsec_mgmt_t)
 
 term_use_console(ipsec_mgmt_t)
 term_use_all_inherited_terms(ipsec_mgmt_t)
@@ -333,10 +385,15 @@ logging_send_syslog_msg(ipsec_mgmt_t)
 sysnet_manage_config(ipsec_mgmt_t)
 sysnet_domtrans_ifconfig(ipsec_mgmt_t)
 sysnet_etc_filetrans_config(ipsec_mgmt_t)
+sysnet_exec_ifconfig(ipsec_mgmt_t)
+sysnet_nnp_domtrans_ifconfig(ipsec_mgmt_t)
 
 systemd_exec_systemctl(ipsec_mgmt_t)
 
 userdom_use_inherited_user_terminals(ipsec_mgmt_t)
+
+allow ipsec_mgmt_t ipsec_mgmt_devpts_t:chr_file rw_term_perms;
+term_create_pty(ipsec_mgmt_t,ipsec_mgmt_devpts_t)
 
 optional_policy(`
     bind_domtrans(ipsec_mgmt_t)
@@ -355,8 +412,7 @@ optional_policy(`
 
 optional_policy(`
 	dbus_system_bus_client(ipsec_mgmt_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(ipsec_mgmt_t)
+	dbus_connect_system_bus(ipsec_mgmt_t)
 
 	optional_policy(`
 		networkmanager_dbus_chat(ipsec_mgmt_t)
@@ -372,7 +428,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_domtrans_insmod(ipsec_mgmt_t)
+	modutils_domtrans_kmod(ipsec_mgmt_t)
 ')
 
 optional_policy(`

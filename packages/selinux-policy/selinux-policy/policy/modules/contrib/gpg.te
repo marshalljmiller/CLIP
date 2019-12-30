@@ -10,19 +10,12 @@ attribute_role gpg_roles;
 roleattribute system_r gpg_roles;
 
 attribute_role gpg_agent_roles;
+roleattribute system_r gpg_agent_roles;
 
 attribute_role gpg_helper_roles;
 roleattribute system_r gpg_helper_roles;
 
 attribute_role gpg_pinentry_roles;
-
-## <desc>
-## <p>
-## Allow usage of the gpg-agent --write-env-file option.
-## This also allows gpg-agent to manage user files.
-## </p>
-## </desc>
-gen_tunable(gpg_agent_env_file, false)
 
 ## <desc>
 ## <p>
@@ -50,6 +43,11 @@ type gpg_agent_tmp_t;
 typealias gpg_agent_tmp_t alias { user_gpg_agent_tmp_t staff_gpg_agent_tmp_t sysadm_gpg_agent_tmp_t };
 typealias gpg_agent_tmp_t alias { auditadm_gpg_agent_tmp_t secadm_gpg_agent_tmp_t };
 userdom_user_tmp_file(gpg_agent_tmp_t)
+
+type gpg_agent_tmpfs_t;
+typealias gpg_agent_tmpfs_t alias { user_gpg_agent_tmpfs_t staff_gpg_agent_tmpfs_t sysadm_gpg_agent_tmpfs_t };
+typealias gpg_agent_tmpfs_t alias { auditadm_gpg_agent_tmpfs_t secadm_gpg_agent_tmpfs_t };
+userdom_user_tmpfs_file(gpg_agent_tmpfs_t)
 
 type gpg_secret_t;
 typealias gpg_secret_t alias { user_gpg_secret_t staff_gpg_secret_t sysadm_gpg_secret_t };
@@ -85,6 +83,9 @@ domain_type(gpg_web_t)
 gpg_entry_type(gpg_web_t)
 role system_r types gpg_web_t;
 
+type gpg_tmpfs_t;
+files_tmpfs_file(gpg_tmpfs_t)
+
 ########################################
 #
 # GPG local policy
@@ -94,15 +95,19 @@ allow gpgdomain self:capability { ipc_lock setuid };
 allow gpgdomain self:process { getsched setsched };
 #at setrlimit is for ulimit -c 0
 allow gpgdomain self:process { signal signull setrlimit getcap setcap setpgid };
-dontaudit gpgdomain self:netlink_audit_socket { r_netlink_socket_perms nlmsg_relay };
+dontaudit gpgdomain self:netlink_audit_socket { create_netlink_socket_perms nlmsg_relay };
 allow gpgdomain self:netlink_kobject_uevent_socket create_socket_perms;
+allow gpgdomain self:netlink_audit_socket { create_socket_perms nlmsg_relay };
 
 allow gpgdomain self:fifo_file rw_fifo_file_perms;
 allow gpgdomain self:tcp_socket create_stream_socket_perms;
+allow gpgdomain self:unix_stream_socket connectto;
 
 manage_dirs_pattern(gpg_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
 manage_files_pattern(gpg_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
 files_tmp_filetrans(gpg_t, gpg_agent_tmp_t, { dir file })
+allow gpg_t gpg_agent_tmp_t:file map;
+can_exec(gpg_t, gpg_agent_tmp_t)
 
 allow gpg_t gpg_secret_t:dir create_dir_perms;
 manage_sock_files_pattern(gpg_t, gpg_secret_t, gpg_secret_t)
@@ -126,11 +131,15 @@ corenet_tcp_sendrecv_all_ports(gpg_t)
 corenet_udp_sendrecv_all_ports(gpg_t)
 corenet_tcp_connect_all_ports(gpg_t)
 corenet_sendrecv_all_client_packets(gpg_t)
+corenet_udp_bind_all_unreserved_ports(gpg_t)
 
 dev_read_rand(gpg_t)
 dev_read_urand(gpg_t)
 dev_read_generic_usb_dev(gpg_t)
 dev_dontaudit_getattr_all(gpg_t)
+dev_list_sysfs(gpg_t)
+dev_read_sysfs(gpg_t)
+dev_rw_generic_usb_dev(gpg_t)
 
 fs_getattr_xattr_fs(gpg_t)
 fs_list_inotifyfs(gpg_t)
@@ -144,6 +153,10 @@ auth_use_nsswitch(gpg_t)
 init_dontaudit_getattr_initctl(gpg_t)
 
 logging_send_syslog_msg(gpg_t)
+
+miscfiles_map_generic_certs(gpg_t)
+
+term_search_ptys(gpg_t)
 
 userdom_use_inherited_user_terminals(gpg_t)
 # sign/encrypt user files
@@ -180,6 +193,10 @@ optional_policy(`
 optional_policy(`
 	xserver_use_xdm_fds(gpg_t)
 	xserver_rw_xdm_pipes(gpg_t)
+')
+
+optional_policy(`
+    udev_read_db(gpg_t)
 ')
 
 #optional_policy(`
@@ -243,6 +260,7 @@ allow gpg_agent_t self:process { setrlimit signal_perms };
 
 allow gpg_agent_t self:unix_stream_socket { create_stream_socket_perms connectto } ;
 allow gpg_agent_t self:fifo_file rw_fifo_file_perms;
+allow gpg_agent_t self:netlink_kobject_uevent_socket create_socket_perms;
 
 # read and write ~/.gnupg (gpg-agent stores secret keys in ~/.gnupg/private-keys-v1.d )
 manage_dirs_pattern(gpg_agent_t, gpg_secret_t, gpg_secret_t)
@@ -256,11 +274,18 @@ manage_files_pattern(gpg_agent_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
 manage_sock_files_pattern(gpg_agent_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
 files_tmp_filetrans(gpg_agent_t, gpg_agent_tmp_t, { file sock_file dir })
 
+manage_dirs_pattern(gpg_agent_t, gpg_agent_tmpfs_t, gpg_agent_tmpfs_t)
+manage_files_pattern(gpg_agent_t, gpg_agent_tmpfs_t, gpg_agent_tmpfs_t)
+manage_sock_files_pattern(gpg_agent_t, gpg_agent_tmpfs_t, gpg_agent_tmpfs_t)
+fs_tmpfs_filetrans(gpg_agent_t, gpg_agent_tmpfs_t, { dir file sock_file })
+
 # allow gpg to connect to the gpg agent
 stream_connect_pattern(gpg_t, gpg_agent_tmp_t, gpg_agent_tmp_t, gpg_agent_t)
 
 kernel_read_system_state(gpg_agent_t)
 kernel_read_core_if(gpg_agent_t)
+
+auth_use_nsswitch(gpg_agent_t)
 
 corecmd_read_bin_symlinks(gpg_agent_t)
 corecmd_exec_bin(gpg_agent_t)
@@ -268,10 +293,19 @@ corecmd_exec_shell(gpg_agent_t)
 
 dev_read_rand(gpg_agent_t)
 dev_read_urand(gpg_agent_t)
+dev_rw_generic_usb_dev(gpg_agent_t)
+dev_list_sysfs(gpg_agent_t)
+dev_read_sysfs(gpg_agent_t)
+dev_dontaudit_getattr_all_chr_files(gpg_agent_t)
+dev_dontaudit_getattr_all_blk_files(gpg_agent_t)
 
 domain_use_interactive_fds(gpg_agent_t)
 
 fs_dontaudit_list_inotifyfs(gpg_agent_t)
+
+init_getattr_initctl(gpg_agent_t)
+
+logging_send_syslog_msg(gpg_agent_t)
 
 miscfiles_read_certs(gpg_agent_t)
 
@@ -281,18 +315,13 @@ userdom_use_inherited_user_terminals(gpg_agent_t)
 userdom_search_user_home_dirs(gpg_agent_t)
 userdom_filetrans_home_content(gpg_agent_t)
 
+userdom_manage_user_home_content_dirs(gpg_agent_t)
+userdom_manage_user_home_content_files(gpg_agent_t)
+userdom_manage_all_user_tmp_content(gpg_agent_t)
+
 ifdef(`hide_broken_symptoms',`
 	userdom_dontaudit_read_user_tmp_files(gpg_agent_t)
 	userdom_dontaudit_write_user_tmp_files(gpg_agent_t)
-')
-
-tunable_policy(`gpg_agent_env_file',`
-	# write ~/.gpg-agent-info or a similar to the users home dir
-	# or subdir (gpg-agent --write-env-file option)
-	#
-	userdom_manage_user_home_content_dirs(gpg_agent_t)
-	userdom_manage_user_home_content_files(gpg_agent_t)
-    userdom_manage_all_user_tmp_content(gpg_agent_t)
 ')
 
 userdom_home_manager(gpg_agent_t)
@@ -307,6 +336,14 @@ optional_policy(`
 
 optional_policy(`
 	pcscd_stream_connect(gpg_agent_t)
+')
+
+optional_policy(`
+    gpm_getattr_gpmctl(gpg_agent_t)
+')
+
+optional_policy(`
+    udev_read_db(gpg_agent_t)
 ')
 
 ##############################
@@ -326,14 +363,28 @@ can_exec(gpg_pinentry_t, pinentry_exec_t)
 
 # we need to allow gpg-agent to call pinentry so it can get the passphrase
 # from the user.
+allow gpg_agent_t gpg_pinentry_t:process { siginh noatsecure rlimitinh };
 domtrans_pattern(gpg_agent_t, pinentry_exec_t, gpg_pinentry_t)
+
+ps_process_pattern(gpg_pinentry_t, gpg_t)
 
 manage_sock_files_pattern(gpg_pinentry_t, gpg_pinentry_tmp_t, gpg_pinentry_tmp_t)
 userdom_user_tmp_filetrans(gpg_pinentry_t, gpg_pinentry_tmp_t, sock_file)
 
+manage_dirs_pattern(gpg_pinentry_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
+manage_files_pattern(gpg_pinentry_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
+manage_sock_files_pattern(gpg_pinentry_t, gpg_agent_tmp_t, gpg_agent_tmp_t)
+files_tmp_filetrans(gpg_pinentry_t, gpg_agent_tmp_t, { dir sock_file file })
+
 manage_dirs_pattern(gpg_pinentry_t, gpg_pinentry_tmpfs_t, gpg_pinentry_tmpfs_t)
 manage_files_pattern(gpg_pinentry_t, gpg_pinentry_tmpfs_t, gpg_pinentry_tmpfs_t)
 fs_tmpfs_filetrans(gpg_pinentry_t, gpg_pinentry_tmpfs_t, { file dir })
+
+# read and write ~/.gnupg (gpg-agent stores secret keys in ~/.gnupg/private-keys-v1.d )
+manage_dirs_pattern(gpg_pinentry_t, gpg_secret_t, gpg_secret_t)
+manage_sock_files_pattern(gpg_pinentry_t, gpg_secret_t, gpg_secret_t)
+manage_files_pattern(gpg_pinentry_t, gpg_secret_t, gpg_secret_t)
+manage_lnk_files_pattern(gpg_pinentry_t, gpg_secret_t, gpg_secret_t)
 
 # read /proc/meminfo
 kernel_read_system_state(gpg_pinentry_t)
@@ -355,13 +406,15 @@ dev_read_rand(gpg_pinentry_t)
 # read /etc/X11/qtrc
 
 fs_dontaudit_list_inotifyfs(gpg_pinentry_t)
-fs_getattr_tmpfs(gpg_pinentry_t)
+fs_getattr_all_fs(gpg_pinentry_t)
 
 auth_use_nsswitch(gpg_pinentry_t)
 
 logging_send_syslog_msg(gpg_pinentry_t)
 
 miscfiles_read_fonts(gpg_pinentry_t)
+
+term_search_ptys(gpg_pinentry_t)
 
 # for .Xauthority
 userdom_read_user_home_content_files(gpg_pinentry_t)
@@ -372,9 +425,11 @@ userdom_signull_unpriv_users(gpg_pinentry_t)
 userdom_use_user_terminals(gpg_pinentry_t)
 
 userdom_home_reader(gpg_pinentry_t)
+userdom_stream_connect(gpg_pinentry_t)
+userdom_map_tmp_files(gpg_pinentry_t)
 
 optional_policy(`
-	gnome_read_home_config(gpg_pinentry_t)
+	gnome_manage_home_config(gpg_pinentry_t)
 ')
 
 optional_policy(`
@@ -395,7 +450,10 @@ optional_policy(`
 
 optional_policy(`
 	xserver_user_x_domain_template(gpg_pinentry, gpg_pinentry_t, gpg_pinentry_tmpfs_t)
+')
 
+optional_policy(`
+    ssh_read_state(gpg_pinentry_t)
 ')
 
 #############################

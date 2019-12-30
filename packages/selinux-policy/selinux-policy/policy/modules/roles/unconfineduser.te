@@ -27,6 +27,13 @@ gen_tunable(unconfined_mozilla_plugin_transition, false)
 ## </desc>
 gen_tunable(unconfined_login, true)
 
+## <desc>
+## <p>
+## Allow a unconfined user to dynamically transition to a new context using setcon.
+## </p>
+## </desc>
+gen_tunable(unconfined_dyntrans_all, false)
+
 # usage in this module of types created by these
 # calls is not correct, however we dont currently
 # have another method to add access to these types
@@ -34,6 +41,8 @@ userdom_base_user_template(unconfined)
 userdom_manage_home_role(unconfined_r, unconfined_t)
 userdom_manage_tmp_role(unconfined_r, unconfined_t)
 userdom_unpriv_type(unconfined_t)
+userdom_login_userdomain(unconfined_t)
+userdom_home_filetrans_user_home_dir(unconfined_t)
 
 type unconfined_exec_t;
 application_domain(unconfined_t, unconfined_exec_t)
@@ -59,8 +68,16 @@ dontaudit unconfined_t self:file setattr;
 allow unconfined_t self:system syslog_read;
 dontaudit unconfined_t self:capability sys_module;
 
+allow unconfined_t file_type:system module_load;
+
+allow unconfined_t self:cap_userns all_cap_userns_perms;
+
+allow unconfined_t self:bpf { map_create map_read map_write prog_load prog_run };
+
 kernel_rw_unlabeled_socket(unconfined_t)
 kernel_rw_unlabeled_rawip_socket(unconfined_t)
+kernel_rw_unlabeled_smc_socket(unconfined_t)
+kernel_rw_unlabeled_vsock_socket(unconfined_t)
 
 files_create_boot_flag(unconfined_t)
 files_create_default_dir(unconfined_t)
@@ -68,6 +85,7 @@ files_root_filetrans_default(unconfined_t, dir)
 
 init_domtrans_script(unconfined_t)
 init_telinit(unconfined_t)
+init_prog_run_bpf(unconfined_t)
 
 logging_send_syslog_msg(unconfined_t)
 
@@ -96,6 +114,10 @@ tunable_policy(`unconfined_login',`
 	allow unconfined_t unconfined_login_domain:fd use;
 	allow unconfined_t unconfined_login_domain:fifo_file rw_file_perms;
 	allow unconfined_t unconfined_login_domain:process sigchld;
+')
+
+tunable_policy(`unconfined_dyntrans_all',`
+    domain_dyntrans(unconfined_t)
 ')
 
 optional_policy(`
@@ -129,6 +151,10 @@ optional_policy(`
 	optional_policy(`
 		hal_dbus_chat(unconfined_t)
 	')
+
+    optional_policy(`
+        kpatch_run(unconfined_t,unconfined_r)
+    ')
 
 	optional_policy(`
 		networkmanager_dbus_chat(unconfined_t)
@@ -167,7 +193,6 @@ optional_policy(`
 	
 		xserver_rw_session(unconfined_t, user_tmpfs_t)
 		xserver_dbus_chat_xdm(unconfined_t)
-        	miscfiles_map_fonts(unconfined_t)
 	')
 ')
 
@@ -190,6 +215,14 @@ optional_policy(`
 	tunable_policy(`unconfined_chrome_sandbox_transition',`
 		chrome_domtrans_sandbox(unconfined_t)
 	')
+')
+
+optional_policy(`
+	container_runtime_entrypoint(unconfined_t)
+')
+
+optional_policy(`
+	oddjob_mkhomedir_entrypoint(unconfined_t)
 ')
 
 optional_policy(`
@@ -230,6 +263,10 @@ optional_policy(`
 		gnome_dbus_chat_gconfdefault(unconfined_t)
 		gnome_command_domtrans_gkeyringd(unconfined_dbusd_t,unconfined_t)
 	')
+
+    optional_policy(`
+        gnome_filetrans_cert_home_content(unconfined_t)
+    ')
 
 	optional_policy(`
 		ipsec_mgmt_dbus_chat(unconfined_t)
@@ -297,7 +334,16 @@ optional_policy(`
 ')
 
 optional_policy(`
+	ipa_run_helper(unconfined_t, unconfined_r)
+')
+
+optional_policy(`
+	chronyd_run_chronyc(unconfined_t, unconfined_r)
+')
+
+optional_policy(`
 	oddjob_run_mkhomedir(unconfined_t, unconfined_r)
+	oddjob_run(unconfined_t, unconfined_r)
 ')
 
 optional_policy(`
@@ -328,6 +374,7 @@ optional_policy(`
 optional_policy(`
 	virt_transition_svirt(unconfined_t, unconfined_r)
 	virt_transition_svirt_sandbox(unconfined_t, unconfined_r)
+	virt_sandbox_entrypoint(unconfined_t)
 ')
 
 optional_policy(`

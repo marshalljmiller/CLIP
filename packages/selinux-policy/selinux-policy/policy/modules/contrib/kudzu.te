@@ -26,7 +26,7 @@ files_pid_file(kudzu_var_run_t)
 # Local policy
 #
 
-allow kudzu_t self:capability { dac_override sys_admin sys_rawio net_admin sys_tty_config mknod };
+allow kudzu_t self:capability { dac_read_search  sys_admin sys_rawio net_admin sys_tty_config mknod };
 dontaudit kudzu_t self:capability sys_tty_config;
 allow kudzu_t self:process { signal_perms execmem };
 allow kudzu_t self:fifo_file rw_fifo_file_perms;
@@ -116,7 +116,7 @@ optional_policy(`
 	modutils_read_module_deps(kudzu_t)
 	modutils_rename_module_config(kudzu_t)
 	modutils_delete_module_config(kudzu_t)
-	modutils_domtrans_insmod(kudzu_t)
+	modutils_domtrans_kmod(kudzu_t)
 ')
 
 optional_policy(`

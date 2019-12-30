@@ -333,6 +333,7 @@ interface(`ipsec_read_config',`
 
 	files_search_etc($1)
 	allow $1 ipsec_conf_file_t:file read_file_perms;
+	allow $1 ipsec_conf_file_t:dir list_dir_perms;
 ')
 
 ########################################
@@ -373,25 +374,6 @@ interface(`ipsec_setcontext_default_spd',`
 
 	allow $1 ipsec_spd_t:association setcontext;
 ')
-########################################
-## <summary>
-##	Read the ipsec_var_run_t files.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
-## </param>
-#
-interface(`ipsec_read_pid',`
-	gen_require(`
-		type ipsec_var_run_t;
-	')
-
-	files_search_pids($1)
-	read_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
-    read_sock_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
-')
 
 ########################################
 ## <summary>
@@ -414,6 +396,26 @@ interface(`ipsec_write_pid',`
 
 ########################################
 ## <summary>
+##	Allow read the IPSEC pid files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`ipsec_read_pid',`
+	gen_require(`
+		type ipsec_var_run_t;
+	')
+
+	files_search_pids($1)
+	read_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
+	read_sock_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
+')
+
+########################################
+## <summary>
 ##	Create, read, write, and delete the IPSEC pid files.
 ## </summary>
 ## <param name="domain">
@@ -429,7 +431,6 @@ interface(`ipsec_manage_pid',`
 
 	files_search_pids($1)
 	manage_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
-    manage_sock_files_pattern($1, ipsec_var_run_t, ipsec_var_run_t)
 ')
 
 ########################################
@@ -540,23 +541,4 @@ interface(`ipsec_mgmt_systemctl',`
     allow $1 ipsec_mgmt_unit_file_t:service manage_service_perms;
 
     ps_process_pattern($1, ipsec_mgmt_t)
-')
-
-########################################
-## <summary>
-##	Do not audit attempts to write the ipsec
-##	log files.
-## </summary>
-## <param name="domain">
-##	<summary>
-##	Domain to not audit.
-##	</summary>
-## </param>
-#
-interface(`ipsec_dontaudit_write_log',`
-	gen_require(`
-		type ipsec_log_t;
-	')
-
-	dontaudit $1 ipsec_log_t:file rw_inherited_file_perms;
 ')

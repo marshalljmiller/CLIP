@@ -50,8 +50,8 @@ init_domtrans_script(anaconda_t)
 
 logging_send_syslog_msg(anaconda_t)
 
-modutils_domtrans_insmod(anaconda_t)
-modutils_domtrans_depmod(anaconda_t)
+modutils_domtrans_kmod(anaconda_t)
+modutils_domtrans_kmod(anaconda_t)
 
 seutil_domtrans_semanage(anaconda_t)
 seutil_domtrans_setsebool(anaconda_t)
@@ -83,9 +83,15 @@ optional_policy(`
 allow install_t self:capability2 mac_admin;
 
 systemd_dbus_chat_localed(install_t)
+systemd_dbus_chat_logind(install_t)
+init_dbus_chat(install_t)
 
 tunable_policy(`deny_ptrace',`',`
 	domain_ptrace_all_domains(install_t)
+')
+
+optional_policy(`
+    iscsid_run(install_t, install_roles)
 ')
 
 optional_policy(`
@@ -94,6 +100,10 @@ optional_policy(`
 
 optional_policy(`
     networkmanager_dbus_chat(install_t)
+')
+
+optional_policy(`
+    policykit_dbus_chat(install_t)
 ')
 
 optional_policy(`

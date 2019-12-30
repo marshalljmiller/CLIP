@@ -29,18 +29,10 @@ systemd_unit_file(accountsd_unit_file_t)
 # Local policy
 #
 
-allow accountsd_t self:capability { chown dac_override setuid setgid sys_ptrace };
+allow accountsd_t self:capability { chown dac_read_search dac_override setuid setgid sys_ptrace };
 allow accountsd_t self:process signal;
 allow accountsd_t self:fifo_file rw_fifo_file_perms;
 allow accountsd_t self:passwd { rootok passwd chfn chsh };
-
-optional_policy(`
-	gen_require(`
-		class dbus acquire_svc;
-	')
-	# listen on org.freedesktop.Accounts
-	allow accountsd_t self:dbus acquire_svc;
-')
 
 manage_dirs_pattern(accountsd_t, accountsd_var_lib_t, accountsd_var_lib_t)
 manage_files_pattern(accountsd_t, accountsd_var_lib_t, accountsd_var_lib_t)
@@ -54,6 +46,7 @@ corecmd_exec_bin(accountsd_t)
 dev_read_sysfs(accountsd_t)
 
 files_read_mnt_files(accountsd_t)
+files_read_usr_files(accountsd_t)
 
 fs_getattr_xattr_fs(accountsd_t)
 fs_list_inotifyfs(accountsd_t)
@@ -65,9 +58,14 @@ auth_read_shadow(accountsd_t)
 
 init_dbus_chat(accountsd_t)
 
+miscfiles_read_localization(accountsd_t)
+
 logging_list_logs(accountsd_t)
 logging_send_syslog_msg(accountsd_t)
 logging_set_loginuid(accountsd_t)
+
+userdom_dontaudit_create_admin_dir(accountsd_t)
+userdom_dontaudit_manage_admin_dir(accountsd_t)
 
 userdom_read_user_tmp_files(accountsd_t)
 userdom_read_user_home_content_files(accountsd_t)

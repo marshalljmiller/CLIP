@@ -21,6 +21,13 @@ gen_tunable(gssd_read_tmp, true)
 ## </desc>
 gen_tunable(nfsd_anon_write, false)
 
+## <desc>
+## <p>
+## Allow rpcd_t  to manage fuse files
+## </p>
+## </desc>
+gen_tunable(rpcd_use_fusefs, false)
+
 attribute rpc_domain;
 
 type exports_t;
@@ -36,6 +43,9 @@ files_tmp_file(gssd_tmp_t)
 
 type rpcd_var_run_t;
 files_pid_file(rpcd_var_run_t)
+
+type rpcd_lock_t;
+files_lock_file(rpcd_lock_t)
 
 # rpcd_t is the domain of rpc daemons.
 # rpc_exec_t is the type of rpc daemon programs.
@@ -57,6 +67,9 @@ systemd_unit_file(nfsd_unit_file_t)
 
 type var_lib_nfs_t;
 files_mountpoint(var_lib_nfs_t)
+
+type nfsd_tmp_t;
+files_tmp_file(nfsd_tmp_t)
 
 ########################################
 #
@@ -124,7 +137,7 @@ optional_policy(`
 # RPC local policy
 #
 
-allow rpcd_t self:capability { setpcap sys_admin chown dac_override setgid setuid };
+allow rpcd_t self:capability { setpcap sys_admin chown dac_read_search dac_override setgid setuid };
 allow rpcd_t self:capability2 block_suspend;
 
 allow rpcd_t self:process { getcap setcap };
@@ -134,6 +147,11 @@ allow rpcd_t rpcd_var_run_t:dir setattr_dir_perms;
 manage_dirs_pattern(rpcd_t, rpcd_var_run_t, rpcd_var_run_t)
 manage_files_pattern(rpcd_t, rpcd_var_run_t, rpcd_var_run_t)
 files_pid_filetrans(rpcd_t, rpcd_var_run_t, { file dir })
+
+read_lnk_files_pattern(rpcd_t, var_lib_nfs_t, var_lib_nfs_t)
+
+allow rpcd_t rpcd_lock_t:file manage_file_perms;
+files_lock_filetrans(rpcd_t, rpcd_lock_t, file)
 
 # rpc.statd executes sm-notify
 can_exec(rpcd_t, rpcd_exec_t)
@@ -170,6 +188,13 @@ miscfiles_read_generic_certs(rpcd_t)
 
 userdom_signal_unpriv_users(rpcd_t)
 userdom_read_user_home_content_files(rpcd_t)
+
+tunable_policy(`rpcd_use_fusefs',`
+	fs_manage_fusefs_dirs(rpcd_t)
+	fs_manage_fusefs_files(rpcd_t)
+	fs_read_fusefs_symlinks(rpcd_t)
+	fs_getattr_fusefs(rpcd_t)
+')
 
 ifdef(`distro_debian',`
 	term_dontaudit_use_unallocated_ttys(rpcd_t)
@@ -209,10 +234,18 @@ optional_policy(`
 # NFSD local policy
 #
 
-allow nfsd_t self:capability { dac_override dac_read_search sys_admin sys_resource };
-dontaudit nfsd_t self:capability sys_rawio;
+allow nfsd_t self:capability { dac_read_search dac_override sys_admin sys_rawio sys_resource };
+
+allow nfsd_t self:process { setcap };
 
 allow nfsd_t exports_t:file read_file_perms;
+
+manage_dirs_pattern(nfsd_t, nfsd_tmp_t, nfsd_tmp_t)
+manage_files_pattern(nfsd_t, nfsd_tmp_t, nfsd_tmp_t)
+files_tmp_filetrans(nfsd_t, nfsd_tmp_t, { file dir })
+
+manage_files_pattern(nfsd_t, rpcd_var_run_t, rpcd_var_run_t)
+files_pid_filetrans(nfsd_t, rpcd_var_run_t, { file })
 
 # for /proc/fs/nfs/exports - should we have a new type?
 kernel_read_system_state(nfsd_t)
@@ -221,6 +254,9 @@ kernel_dontaudit_getattr_core_if(nfsd_t)
 kernel_dontaudit_setsched(nfsd_t)
 kernel_request_load_module(nfsd_t)
 kernel_mounton_proc(nfsd_t)
+kernel_rw_rpc_sysctls_dirs(nfsd_t)
+kernel_create_rpc_sysctls(nfsd_t)
+kernel_rw_fs_sysctls(nfsd_t)
 
 corecmd_exec_shell(nfsd_t)
 
@@ -234,6 +270,7 @@ corenet_tcp_bind_mountd_port(nfsd_t)
 dev_dontaudit_getattr_all_blk_files(nfsd_t)
 dev_dontaudit_getattr_all_chr_files(nfsd_t)
 dev_rw_lvm_control(nfsd_t)
+dev_read_nvme(nfsd_t)
 
 # does not really need this, but it is easier to just allow it
 files_search_pids(nfsd_t)
@@ -243,14 +280,21 @@ files_getattr_tmp_dirs(nfsd_t)
 files_manage_mounttab(nfsd_t)
 files_read_etc_runtime_files(nfsd_t)
 
+fs_read_configfs_files(nfsd_t)
+fs_read_configfs_dirs(nfsd_t)
 fs_mounton_nfsd_fs(nfsd_t)
 fs_mount_nfsd_fs(nfsd_t)
 fs_getattr_all_fs(nfsd_t)
 fs_getattr_all_dirs(nfsd_t)
 fs_manage_nfsd_fs(nfsd_t)
 
-storage_dontaudit_read_fixed_disk(nfsd_t)
+storage_raw_read_fixed_disk(nfsd_t)
 storage_raw_read_removable_device(nfsd_t)
+
+allow nfsd_t nfsd_unit_file_t:file manage_file_perms;
+systemd_unit_file_filetrans(nfsd_t, nfsd_unit_file_t, file)
+systemd_create_unit_file_dirs(nfsd_t)
+systemd_create_unit_file_lnk(nfsd_t)
 
 # Read access to public_content_t and public_content_rw_t
 miscfiles_read_public_files(nfsd_t)
@@ -283,6 +327,24 @@ tunable_policy(`nfs_export_all_ro',`
 ')
 
 optional_policy(`
+    glusterd_manage_log(nfsd_t)
+    glusterd_manage_pid(nfsd_t)
+')
+
+optional_policy(`
+    dbus_system_bus_client(nfsd_t)
+    dbus_acquire_svc_system_dbusd(nfsd_t)
+')
+
+optional_policy(`
+    kerberos_read_keytab(nfsd_t)
+')
+
+optional_policy(`
+    fsadm_manage_pid(nfsd_t)
+')
+
+optional_policy(`
 	mount_exec(nfsd_t)
 	mount_manage_pid_files(nfsd_t)
 ')
@@ -292,7 +354,7 @@ optional_policy(`
 # GSSD local policy
 #
 
-allow gssd_t self:capability { dac_override dac_read_search setuid setgid sys_nice };
+allow gssd_t self:capability {  dac_read_search setuid setgid sys_nice };
 allow gssd_t self:process { getsched setsched };
 allow gssd_t self:fifo_file rw_fifo_file_perms;
 
@@ -311,10 +373,13 @@ kernel_signal(gssd_t)
 
 corecmd_exec_bin(gssd_t)
 
+domain_manage_all_domains_keyrings(gssd_t)
+
 fs_list_rpc(gssd_t)
 fs_rw_rpc_sockets(gssd_t)
 fs_read_rpc_files(gssd_t)
 fs_read_nfsd_files(gssd_t)
+fs_list_tmpfs(gssd_t)
 
 fs_list_inotifyfs(gssd_t)
 files_list_tmp(gssd_t)
@@ -323,6 +388,7 @@ files_dontaudit_write_var_dirs(gssd_t)
 
 auth_use_nsswitch(gssd_t)
 auth_manage_cache(gssd_t)
+auth_login_manage_key(gssd_t)
 
 miscfiles_read_generic_certs(gssd_t)
 
@@ -339,6 +405,10 @@ tunable_policy(`gssd_read_tmp',`
 
 optional_policy(`
 	automount_signal(gssd_t)
+')
+
+optional_policy(`
+    realmd_read_var_lib(gssd_t)
 ')
 
 optional_policy(`

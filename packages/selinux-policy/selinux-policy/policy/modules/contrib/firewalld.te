@@ -26,7 +26,6 @@ files_tmpfs_file(firewalld_tmpfs_t)
 
 type firewalld_var_run_t;
 files_pid_file(firewalld_var_run_t)
-files_pid_filetrans(firewalld_t, firewalld_var_run_t, dir)
 
 type firewalld_unit_file_t;
 systemd_unit_file(firewalld_unit_file_t)
@@ -36,23 +35,17 @@ systemd_unit_file(firewalld_unit_file_t)
 # Local policy
 #
 
-allow firewalld_t self:capability { dac_override net_admin };
+allow firewalld_t self:capability { dac_read_search net_admin net_raw };
 dontaudit firewalld_t self:capability sys_tty_config;
 allow firewalld_t self:fifo_file rw_fifo_file_perms;
 allow firewalld_t self:unix_stream_socket { accept listen };
 allow firewalld_t self:udp_socket create_socket_perms;
-
-optional_policy(`
-    gen_require(`
-        class dbus acquire_svc;
-    ')
-    # Allow firewalld to listen on org.fedoraproject.FirewallD1
-    allow firewalld_t self:dbus acquire_svc;
-')
-
+allow firewalld_t self:netlink_netfilter_socket create_socket_perms;
+allow firewalld_t self:rawip_socket create_socket_perms;
 
 manage_dirs_pattern(firewalld_t, firewalld_etc_rw_t, firewalld_etc_rw_t)
 manage_files_pattern(firewalld_t, firewalld_etc_rw_t, firewalld_etc_rw_t)
+relabel_files_pattern(firewalld_t, firewalld_etc_rw_t, firewalld_etc_rw_t)
 manage_lnk_files_pattern(firewalld_t, firewalld_etc_rw_t, firewalld_etc_rw_t)
 
 allow firewalld_t firewalld_var_log_t:file append_file_perms;
@@ -71,12 +64,17 @@ allow firewalld_t firewalld_tmpfs_t:file mmap_file_perms;
 
 manage_files_pattern(firewalld_t, firewalld_var_run_t, firewalld_var_run_t)
 manage_dirs_pattern(firewalld_t, firewalld_var_run_t, firewalld_var_run_t)
-files_pid_filetrans(firewalld_t, firewalld_var_run_t, file)
+files_pid_filetrans(firewalld_t, firewalld_var_run_t, { file dir })
 can_exec(firewalld_t, firewalld_var_run_t)
 
 kernel_read_network_state(firewalld_t)
 kernel_read_system_state(firewalld_t)
 kernel_rw_net_sysctls(firewalld_t)
+kernel_request_load_module(firewalld_t)
+kernel_getattr_proc(firewalld_t)
+kernel_read_usermodehelper_state(firewalld_t)
+
+files_list_kernel_modules(firewalld_t)
 
 corecmd_exec_bin(firewalld_t)
 corecmd_exec_shell(firewalld_t)
@@ -85,6 +83,7 @@ dev_read_urand(firewalld_t)
 dev_search_sysfs(firewalld_t)
 
 domain_use_interactive_fds(firewalld_t)
+domain_obj_id_change_exemption(firewalld_t)
 
 files_dontaudit_access_check_tmp(firewalld_t)
 files_dontaudit_list_tmp(firewalld_t)
@@ -94,9 +93,19 @@ fs_dontaudit_all_access_check(firewalld_t)
 
 auth_use_nsswitch(firewalld_t)
 
+libs_exec_ldconfig(firewalld_t)
+libs_dontaudit_write_lib_dirs(firewalld_t)
+
 logging_send_syslog_msg(firewalld_t)
 
 sysnet_dns_name_resolve(firewalld_t)
+sysnet_manage_config_dirs(firewalld_t)
+sysnet_manage_config(firewalld_t)
+sysnet_relabelfrom_net_conf(firewalld_t)
+sysnet_relabelto_net_conf(firewalld_t)
+
+userdom_dontaudit_create_admin_dir(firewalld_t)
+userdom_dontaudit_manage_admin_dir(firewalld_t)
 
 optional_policy(`
 	dbus_system_domain(firewalld_t, firewalld_exec_t)
@@ -111,6 +120,7 @@ optional_policy(`
 
 	optional_policy(`
 		networkmanager_dbus_chat(firewalld_t)
+		networkmanager_stream_connect(firewalld_t)
 	')
 ')
 
@@ -123,7 +133,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_domtrans_insmod(firewalld_t)
+	modutils_domtrans_kmod(firewalld_t)
 ')
 
 optional_policy(`

@@ -24,7 +24,7 @@ files_type(aide_db_t)
 # Local policy
 #
 
-allow aide_t self:capability { dac_override fowner ipc_lock sys_admin };
+allow aide_t self:capability { dac_read_search  fowner ipc_lock sys_admin };
 allow aide_t self:process signal;
 
 manage_files_pattern(aide_t, aide_db_t, aide_db_t)
@@ -37,9 +37,11 @@ dev_read_rand(aide_t)
 dev_read_urand(aide_t)
 
 files_read_all_files(aide_t)
+files_mmap_all_files(aide_t)
 files_read_all_symlinks(aide_t)
 files_getattr_all_pipes(aide_t)
 files_getattr_all_sockets(aide_t)
+files_mmap_usr_files(aide_t)
 
 mls_file_read_to_clearance(aide_t)
 mls_file_write_to_clearance(aide_t)
@@ -55,4 +57,8 @@ optional_policy(`
 
 optional_policy(`
 	seutil_use_newrole_fds(aide_t)
+')
+
+optional_policy(`
+    sssd_stream_connect(aide_t)
 ')

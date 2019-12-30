@@ -120,7 +120,7 @@ optional_policy(`
 # gconf-defaults-mechanisms local policy
 #
 
-allow gconfdefaultsm_t self:capability { dac_override sys_nice };
+allow gconfdefaultsm_t self:capability { dac_read_search  sys_nice };
 allow gconfdefaultsm_t self:process getsched;
 allow gconfdefaultsm_t self:fifo_file rw_fifo_file_perms;
 
@@ -255,6 +255,10 @@ optional_policy(`
 	xserver_append_xdm_home_files(gkeyringd_domain)
 	xserver_read_xdm_home_files(gkeyringd_domain)
 	xserver_use_xdm_fds(gkeyringd_domain)
+')
+
+optional_policy(`
+	dbus_dontaudit_stream_connect_system_dbusd(gkeyringd_domain)
 ')
 
 optional_policy(`

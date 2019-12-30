@@ -22,7 +22,7 @@ systemd_unit_file(gssproxy_unit_file_t)
 #
 # gssproxy local policy
 #
-allow gssproxy_t self:capability { setuid setgid };
+allow gssproxy_t self:capability { setuid setgid dac_read_search sys_ptrace };
 allow gssproxy_t self:capability2 block_suspend;
 allow gssproxy_t self:fifo_file rw_fifo_file_perms;
 allow gssproxy_t self:unix_stream_socket create_stream_socket_perms;
@@ -40,10 +40,13 @@ manage_lnk_files_pattern(gssproxy_t, gssproxy_var_run_t, gssproxy_var_run_t)
 files_pid_filetrans(gssproxy_t, gssproxy_var_run_t, { dir file lnk_file sock_file })
 
 kernel_rw_rpc_sysctls(gssproxy_t)
+kernel_read_network_state(gssproxy_t)
 
 domain_use_interactive_fds(gssproxy_t)
 
 files_read_etc_files(gssproxy_t)
+
+fs_getattr_all_fs(gssproxy_t)
 
 auth_use_nsswitch(gssproxy_t)
 
@@ -58,6 +61,15 @@ userdom_manage_user_tmp_dirs(gssproxy_t)
 userdom_manage_user_tmp_files(gssproxy_t)
 
 optional_policy(`
+    apache_domtrans(gssproxy_t)
+    apache_systemctl(gssproxy_t)
+')
+
+optional_policy(`
+    ipa_read_lib(gssproxy_t)
+')
+
+optional_policy(`
 	kerberos_use(gssproxy_t)
 	kerberos_filetrans_named_content(gssproxy_t)
 ')
@@ -65,4 +77,9 @@ optional_policy(`
 optional_policy(`
 	kerberos_keytab_template(gssproxy, gssproxy_t)
 	kerberos_manage_host_rcache(gssproxy_t)
+')
+
+optional_policy(`
+    rpc_domtrans_gssd(gssproxy_t)
+    rpc_read_gssd_state(gssproxy_t)
 ')

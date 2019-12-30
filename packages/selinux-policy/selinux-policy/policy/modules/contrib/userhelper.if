@@ -45,7 +45,7 @@ template(`userhelper_role_template',`
 	#
 	# Local policy
 	#
-	allow $1_userhelper_t self:capability { setuid setgid net_bind_service dac_override chown sys_tty_config };
+	allow $1_userhelper_t self:capability { setuid setgid net_bind_service dac_read_search   chown sys_tty_config };
 	allow $1_userhelper_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 	allow $1_userhelper_t self:process setexec;
 	allow $1_userhelper_t self:fd use;
@@ -319,6 +319,10 @@ template(`userhelper_console_role_template',`
 
 	optional_policy(`
 		dbus_connect_session_bus($1_consolehelper_t)
+	')
+
+	optional_policy(`
+		hddtemp_run($1_consolehelper_t, $2)
 	')
 
 	optional_policy(`

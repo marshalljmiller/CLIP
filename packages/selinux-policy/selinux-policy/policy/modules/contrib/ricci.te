@@ -248,7 +248,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_domtrans_insmod(ricci_modcluster_t)
+	modutils_domtrans_kmod(ricci_modcluster_t)
 ')
 
 optional_policy(`
@@ -401,7 +401,7 @@ optional_policy(`
 # Modservice local policy
 #
 
-allow ricci_modservice_t self:capability { dac_override sys_nice };
+allow ricci_modservice_t self:capability {dac_read_search   sys_nice };
 allow ricci_modservice_t self:process setsched;
 allow ricci_modservice_t self:fifo_file rw_fifo_file_perms;
 

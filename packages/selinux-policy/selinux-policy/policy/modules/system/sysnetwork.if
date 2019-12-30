@@ -17,6 +17,7 @@ interface(`sysnet_domtrans_dhcpc',`
 
 	corecmd_search_bin($1)
 	domtrans_pattern($1, dhcpc_exec_t, dhcpc_t)
+    allow $1 dhcpc_exec_t:file map;
 ')
 
 ########################################
@@ -326,7 +327,7 @@ interface(`sysnet_relabelfrom_dhcpc_state',`
 		type dhcpc_state_t;
 	')
 
-	allow $1 dhcpc_state_t:{ dir file } relabelfrom;
+	allow $1 dhcpc_state_t:file relabelfrom;
 ')
 
 #######################################
@@ -382,7 +383,7 @@ interface(`sysnet_relabelfrom_net_conf',`
                 type net_conf_t;
         ')
 
-        allow $1 net_conf_t:{ dir file } relabelfrom;
+        allow $1 net_conf_t:file relabelfrom;
 ')
 
 ######################################
@@ -450,7 +451,7 @@ interface(`sysnet_read_config',`
 	')
 
 	ifdef(`distro_redhat',`
-        files_search_pids($1)
+        files_search_all_pids($1)
         init_search_pid_dirs($1)
 		allow $1 net_conf_t:dir list_dir_perms;
 		allow $1 net_conf_t:lnk_file read_lnk_file_perms;
@@ -536,6 +537,8 @@ interface(`sysnet_etc_filetrans_config',`
 	')
 
 	files_etc_filetrans($1, net_conf_t, file, $2)
+	files_etc_filetrans($1, net_conf_t, lnk_file, $2)
+
 ')
 
 ########################################
@@ -585,7 +588,7 @@ interface(`sysnet_filetrans_config_fromdir',`
 interface(`sysnet_manage_config',`
 	gen_require(`
 		type net_conf_t;
-	')
+        ')
 
 	allow $1 net_conf_t:file manage_file_perms;
 
@@ -595,10 +598,11 @@ interface(`sysnet_manage_config',`
 	')
 
 	ifdef(`distro_redhat',`
-        files_search_pids($1)
+        files_search_all_pids($1)
         init_search_pid_dirs($1)
 		allow $1 net_conf_t:dir list_dir_perms;
 		manage_files_pattern($1, net_conf_t, net_conf_t)
+		manage_lnk_files_pattern($1, net_conf_t, net_conf_t)
 	')
 ')
 
@@ -625,7 +629,7 @@ interface(`sysnet_manage_config_dirs',`
 	')
 
 	ifdef(`distro_redhat',`
-        files_search_pids($1)
+        files_search_all_pids($1)
         init_search_pid_dirs($1)
 		allow $1 net_conf_t:dir list_dir_perms;
 		manage_dirs_pattern($1, net_conf_t, net_conf_t)
@@ -672,6 +676,49 @@ interface(`sysnet_delete_dhcpc_pid',`
 
 #######################################
 ## <summary>
+##  Manage the dhcp client pid file.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.  
+##  </summary>
+## </param>
+#
+interface(`sysnet_manage_dhcpc_pid',`
+    gen_require(`
+        type dhcpc_var_run_t;
+    ')
+
+    files_rw_pid_dirs($1)
+    manage_files_pattern($1, dhcpc_var_run_t, dhcpc_var_run_t)
+')
+
+########################################
+## <summary>
+##	Create specified objects in generic
+##	pid directories with the dhcpc pid file type.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <param name="name" optional="true">
+##	<summary>
+##	The name of the object being created.
+##	</summary>
+## </param>
+#
+interface(`sysnet_filetrans_dhcpc_pid',`
+	gen_require(`
+		type dhcpc_var_run_t;
+	')
+
+	files_pid_filetrans($1, dhcpc_var_run_t, file, $2)
+')
+
+#######################################
+## <summary>
 ##	Execute ifconfig in the ifconfig domain.
 ## </summary>
 ## <param name="domain">
@@ -687,6 +734,24 @@ interface(`sysnet_domtrans_ifconfig',`
 
 	corecmd_search_bin($1)
 	domtrans_pattern($1, ifconfig_exec_t, ifconfig_t)
+')
+
+########################################
+## <summary>
+##	NNP Transition to ifconfig_t.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`sysnet_nnp_domtrans_ifconfig',`
+	gen_require(`
+		type ifconfig_t;
+	')
+
+	allow $1 ifconfig_t:process2 { nnp_transition nosuid_transition };
 ')
 
 ########################################
@@ -811,6 +876,7 @@ interface(`sysnet_read_dhcp_config',`
 	files_search_etc($1)
 	allow $1 dhcp_etc_t:dir list_dir_perms;
 	read_files_pattern($1, dhcp_etc_t, dhcp_etc_t)
+	allow $1 dhcp_etc_t:file map;
 	allow $1 dhcp_etc_t:lnk_file read_lnk_file_perms;
 ')
 
@@ -924,8 +990,10 @@ interface(`sysnet_dns_name_resolve',`
 	corenet_tcp_sendrecv_dns_port($1)
 	corenet_udp_sendrecv_dns_port($1)
 	corenet_tcp_connect_dns_port($1)
-    corenet_tcp_connect_dnssec_port($1)
+	corenet_tcp_connect_dnssec_port($1)
 	corenet_sendrecv_dns_client_packets($1)
+
+	files_search_all_pids($1)
 
 	miscfiles_read_generic_certs($1)
 
@@ -934,6 +1002,10 @@ interface(`sysnet_dns_name_resolve',`
 	optional_policy(`
 		avahi_stream_connect($1)
 	')
+
+    optional_policy(`
+        dbus_stream_connect_system_dbusd($1)
+    ')
 
 	optional_policy(`
 		nscd_use($1)
@@ -1065,19 +1137,37 @@ interface(`sysnet_role_transition_dhcpc',`
 interface(`sysnet_filetrans_named_content',`
 	gen_require(`
 		type net_conf_t;
+		type systemd_resolved_var_run_t;
 	')
 
 	files_etc_filetrans($1, net_conf_t, file, "resolv.conf")
 	files_etc_filetrans($1, net_conf_t, file, "resolv.conf.tmp")
 	files_etc_filetrans($1, net_conf_t, file, "resolv.conf.fp-tmp")
 	files_etc_filetrans($1, net_conf_t, file, "resolv.conf.fp-saved")
+	files_etc_filetrans($1, net_conf_t, file, "resolv-secure.conf")
+	files_etc_filetrans($1, net_conf_t, file, ".resolv.conf.dnssec-trigger")
+	files_etc_filetrans($1, net_conf_t, file, ".resolv-secure.conf.dnssec-trigger")
+	files_etc_filetrans($1, net_conf_t, lnk_file, ".resolv.conf")
+	files_etc_filetrans($1, net_conf_t, lnk_file, "resolv.conf")
+	files_etc_filetrans($1, net_conf_t, lnk_file, ".resolv.conf.NetworkManager")
 	files_etc_filetrans($1, net_conf_t, file, "denyhosts")
 	files_etc_filetrans($1, net_conf_t, file, "hosts")
 	files_etc_filetrans($1, net_conf_t, file, "hosts.deny")
 	files_etc_filetrans($1, net_conf_t, file, "ethers")
 	files_etc_filetrans($1, net_conf_t, file, "yp.conf")
 	files_etc_filetrans($1, net_conf_t, file, "ntp.conf")
-    init_pid_filetrans($1, net_conf_t, dir, "network") 
+	init_pid_filetrans($1, net_conf_t, dir, "network")
+
+	optional_policy(`
+	    networkmanager_pid_filetrans($1, net_conf_t, file, "resolv.conf")
+	    networkmanager_pid_filetrans($1, net_conf_t, file, "resolv.conf.tmp")
+    ')
+
+    optional_policy(`
+        sysnet_filetrans_config_fromdir($1,systemd_resolved_var_run_t, file, "resolv.conf")
+        sysnet_filetrans_config_fromdir($1,systemd_resolved_var_run_t, file, "resolv.conf.tmp")
+        sysnet_filetrans_config_fromdir($1,systemd_resolved_var_run_t, file, "stub-resolv.conf")
+    ')
 ')
 
 ########################################
@@ -1120,18 +1210,36 @@ interface(`sysnet_filetrans_named_content_ifconfig',`
 
 ########################################
 ## <summary>
-##      Transition to sysnet ifconfig named content
+##	Transition to sysnet ifconfig named content
 ## </summary>
 ## <param name="domain">
-##      <summary>
+##	<summary>
 ##      Domain allowed access.
-##      </summary>
+##	</summary>
 ## </param>
 #
 interface(`sysnet_filetrans_net_conf',`
-        gen_require(`
-                type net_conf_t;
-        ')
+	gen_require(`
+		type net_conf_t;
+	')
 
-        files_etc_filetrans($1, net_conf_t, file)
+	files_etc_filetrans($1, net_conf_t, file)
+')
+
+########################################
+## <summary>
+##	Transition to cloud-init  named content
+## </summary>
+## <param name="domain">
+##	<summary>
+##      Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`sysnet_filetrans_cloud_net_conf',`
+	gen_require(`
+		type net_conf_t;
+	')
+
+	files_pid_filetrans($1, net_conf_t, dir, "cloud-init")
 ')

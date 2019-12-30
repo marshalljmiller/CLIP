@@ -72,7 +72,7 @@ AWK ?= gawk
 GREP ?= egrep
 INSTALL ?= install
 M4 ?= m4
-PYTHON ?= python
+PYTHON ?= python3
 SED ?= sed
 SORT ?= LC_ALL=C sort
 UMASK ?= umask
@@ -251,12 +251,12 @@ seusers := $(appconf)/seusers
 appdir := $(contextpath)
 user_default_contexts := $(wildcard config/appconfig-$(TYPE)/*_default_contexts)
 user_default_contexts_names := $(addprefix $(contextpath)/users/,$(subst _default_contexts,,$(notdir $(user_default_contexts))))
-appfiles := $(addprefix $(appdir)/,default_contexts default_type initrc_context failsafe_context userhelper_context removable_context dbus_contexts sepgsql_contexts x_contexts customizable_types securetty_types virtual_image_context virtual_domain_context lxc_contexts systemd_contexts snapperd_contexts) $(contextpath)/files/media $(user_default_contexts_names)
+appfiles := $(addprefix $(appdir)/,default_contexts default_type initrc_context failsafe_context userhelper_context removable_context dbus_contexts sepgsql_contexts x_contexts customizable_types securetty_types virtual_image_context virtual_domain_context lxc_contexts openssh_contexts systemd_contexts snapperd_contexts) $(contextpath)/files/media $(user_default_contexts_names)
 net_contexts := $(builddir)net_contexts
 
-all_layers := $(shell find $(wildcard $(moddir)/*) -maxdepth 0 -type d)
+all_layers := $(shell find $(moddir)/* -maxdepth 0 -type d)
 ifdef LOCAL_ROOT
-all_layers += $(shell find $(wildcard $(local_moddir)/*) -maxdepth 0 -type d)
+all_layers += $(shell find $(local_moddir)/* -maxdepth 0 -type d)
 endif
 
 generated_te := $(basename $(foreach dir,$(all_layers),$(wildcard $(dir)/*.te.in)))
@@ -366,7 +366,7 @@ $(moddir)/kernel/corenetwork.if: $(moddir)/kernel/corenetwork.te.in $(moddir)/ke
 	@echo "# $(notdir $@).in or $(notdir $@).m4 file should be modified." >> $@
 	@echo "#" >> $@
 	$(verbose) cat $@.in >> $@
-	$(verbose) $(GREP) "^[[:blank:]]*network_(interface|node|port|packet)(_controlled)?\(.*\)" $< \
+	$(verbose) $(GREP) "^[[:blank:]]*(network_(interface|node|port|packet)(_controlled)?)|ib_(pkey|endport)\(.*\)" $< \
 		| $(M4) -D self_contained_policy $(M4PARAM) $(m4divert) $@.m4 $(m4undivert) - \
 		| $(SED) -e 's/dollarsone/\$$1/g' -e 's/dollarszero/\$$0/g' >> $@
 
@@ -610,7 +610,6 @@ resetlabels:
 # Clean everything
 #
 bare: clean
-	echo "hehe kde jsem asi tak"
 	pwd
 	#rm -f $(polxml)
 	#rm -f $(layerxml)

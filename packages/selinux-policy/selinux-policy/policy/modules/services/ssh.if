@@ -53,7 +53,7 @@ template(`ssh_basic_client_template',`
 	# Client local policy
 	#
 
-	allow $1_ssh_t self:capability { setuid setgid dac_override dac_read_search };
+	allow $1_ssh_t self:capability { setuid setgid  dac_read_search };
 	allow $1_ssh_t self:process ~{ ptrace setcurrent setexec setfscreate setrlimit execmem execstack execheap };
 	allow $1_ssh_t self:fd use;
 	allow $1_ssh_t self:fifo_file rw_fifo_file_perms;
@@ -64,6 +64,7 @@ template(`ssh_basic_client_template',`
 	allow $1_ssh_t self:msgq create_msgq_perms;
 	allow $1_ssh_t self:msg { send receive };
 	allow $1_ssh_t self:tcp_socket create_stream_socket_perms;
+    allow $1_ssh_t self:tun_socket create_socket_perms;
 
 	# for rsync
 	allow $1_ssh_t $2:unix_stream_socket rw_socket_perms;
@@ -109,6 +110,7 @@ template(`ssh_basic_client_template',`
 
 	kernel_read_kernel_sysctls($1_ssh_t)
 	kernel_read_system_state($1_ssh_t)
+	kernel_read_network_state($1_ssh_t)
 
 	corenet_all_recvfrom_netlabel($1_ssh_t)
 	corenet_tcp_sendrecv_generic_if($1_ssh_t)
@@ -118,6 +120,7 @@ template(`ssh_basic_client_template',`
 	corenet_sendrecv_ssh_client_packets($1_ssh_t)
 	corenet_tcp_bind_generic_node($1_ssh_t)
 	corenet_tcp_bind_all_unreserved_ports($1_ssh_t)
+    corenet_rw_inherited_tun_tap_dev($1_ssh_t)
 
 	dev_read_urand($1_ssh_t)
 
@@ -193,6 +196,10 @@ template(`ssh_dyntransition_domain_template',`
 ## </param>
 #
 template(`ssh_server_template',`
+    gen_require(`
+        type sshd_t;
+    ')
+
 	type $1_t, ssh_server;
 	auth_login_pgm_domain($1_t)
 
@@ -205,7 +212,7 @@ template(`ssh_server_template',`
 	type $1_var_run_t;
 	files_pid_file($1_var_run_t)
 
-	allow $1_t self:capability { kill sys_admin sys_chroot sys_nice sys_resource chown dac_override fowner fsetid net_admin setgid setuid sys_tty_config };
+	allow $1_t self:capability { kill sys_admin sys_chroot sys_nice sys_resource chown dac_read_search dac_override fowner fsetid net_admin setgid setuid sys_tty_config };
 	allow $1_t self:fifo_file rw_fifo_file_perms;
 	allow $1_t self:process { getcap signal getsched setsched setrlimit setexec };
 	allow $1_t self:process { signal getcap getsched setsched setrlimit setexec };
@@ -232,6 +239,7 @@ template(`ssh_server_template',`
 	allow $1_t sshd_key_t:file read_file_perms;
 
 	kernel_read_kernel_sysctls($1_t)
+	kernel_search_network_sysctl($1_t)
 	kernel_read_network_state($1_t)
 	kernel_request_load_module($1_t)
 
@@ -263,6 +271,8 @@ template(`ssh_server_template',`
 	corecmd_getattr_bin_files($1_t)
 	# for sshd subsystems, such as sftp-server.
 	corecmd_getattr_bin_files($1_t)
+
+	dev_rw_crypto($1_t)
 
 	domain_interactive_fd($1_t)
 	domain_dyntrans_type($1_t)
@@ -683,6 +693,24 @@ interface(`ssh_agent_exec',`
 
 ########################################
 ## <summary>
+##	Send generic signals to ssh_agent_type.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`ssh_agent_signal',`
+	gen_require(`
+		attribute ssh_agent_type;
+	')
+
+	allow $1 ssh_agent_type:process signal;
+')
+
+########################################
+## <summary>
 ##	Getattr ssh home directory
 ## </summary>
 ## <param name="domain">
@@ -754,6 +782,7 @@ interface(`ssh_domtrans_keygen',`
 	')
 
 	domtrans_pattern($1, ssh_keygen_exec_t, ssh_keygen_t)
+    allow $1 ssh_keygen_exec_t:file map;
 ')
 
 ########################################
@@ -798,6 +827,24 @@ interface(`ssh_run_keygen',`
 
 	role $2 types ssh_keygen_t;
 	ssh_domtrans_keygen($1)
+')
+
+########################################
+## <summary>
+##	Getattr ssh server keys
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to not audit.
+##	</summary>
+## </param>
+#
+interface(`ssh_getattr_server_keys',`
+	gen_require(`
+		type sshd_key_t;
+	')
+
+	allow $1 sshd_key_t:file getattr_file_perms;
 ')
 
 ########################################
@@ -1021,4 +1068,22 @@ interface(`ssh_systemctl',`
 	allow $1 sshd_unit_file_t:service manage_service_perms;
 
 	ps_process_pattern($1, sshd_t)
+')
+
+########################################
+## <summary>
+##	Allow the domain to read state files in /proc.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain to allow access.
+##	</summary>
+## </param>
+#
+interface(`ssh_read_state',`
+	gen_require(`
+		type ssh_t;
+	')
+
+	read_files_pattern($1, ssh_t, ssh_t)
 ')

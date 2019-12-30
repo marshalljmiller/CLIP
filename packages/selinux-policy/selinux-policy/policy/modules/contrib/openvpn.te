@@ -65,7 +65,7 @@ files_pid_file(openvpn_var_run_t)
 #
 
 allow openvpn_t self:capability { dac_read_search dac_override ipc_lock net_bind_service net_admin setgid setuid sys_chroot sys_tty_config sys_nice };
-allow openvpn_t self:process { signal getsched setsched };
+allow openvpn_t self:process { signal getsched setcap setsched };
 allow openvpn_t self:fifo_file rw_fifo_file_perms;
 allow openvpn_t self:unix_dgram_socket sendto;
 allow openvpn_t self:unix_stream_socket { accept connectto listen };
@@ -100,7 +100,8 @@ logging_log_filetrans(openvpn_t, openvpn_var_log_t, file)
 
 manage_dirs_pattern(openvpn_t, openvpn_var_run_t, openvpn_var_run_t)
 manage_files_pattern(openvpn_t, openvpn_var_run_t, openvpn_var_run_t)
-files_pid_filetrans(openvpn_t, openvpn_var_run_t, { file dir })
+manage_sock_files_pattern(openvpn_t, openvpn_var_run_t, openvpn_var_run_t)
+files_pid_filetrans(openvpn_t, openvpn_var_run_t, { sock_file file dir })
 
 can_exec(openvpn_t, openvpn_etc_t)
 
@@ -153,11 +154,11 @@ fs_list_cgroup_dirs(openvpn_t)
 
 auth_use_pam(openvpn_t)
 
+init_read_state(openvpn_t)
+
 logging_send_syslog_msg(openvpn_t)
 
 miscfiles_read_all_certs(openvpn_t)
-certmonger_read_lib_files(openvpn_t)
-certmonger_search_lib(openvpn_t)
 
 sysnet_dns_name_resolve(openvpn_t)
 sysnet_exec_ifconfig(openvpn_t)
@@ -167,7 +168,6 @@ sysnet_use_ldap(openvpn_t)
 
 systemd_passwd_agent_domtrans(openvpn_t)
 systemd_manage_passwd_run(openvpn_t)
-systemd_notify_write_socket(openvpn_t)
 
 userdom_use_inherited_user_terminals(openvpn_t)
 userdom_read_home_certs(openvpn_t)
@@ -205,12 +205,12 @@ optional_policy(`
     networkmanager_stream_connect(openvpn_t)
     networkmanager_manage_pid_files(openvpn_t)
     networkmanager_manage_pid_sock_files(openvpn_t)
+    networkmanager_attach_tun_iface(openvpn_t)
 ')
 
 optional_policy(`
 	dbus_system_bus_client(openvpn_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(openvpn_t)
+	dbus_connect_system_bus(openvpn_t)
 
 	optional_policy(`
 		networkmanager_dbus_chat(openvpn_t)
@@ -218,7 +218,15 @@ optional_policy(`
 ')
 
 optional_policy(`
+    vpnc_manage_pid(openvpn_t)
+')
+
+optional_policy(`
 	unconfined_attach_tun_iface(openvpn_t)
+')
+
+tunable_policy(`use_ecryptfs_home_dirs',`
+	fs_manage_ecryptfs_files(openvpn_t)
 ')
 
 type openvpn_unconfined_script_t;

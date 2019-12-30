@@ -105,6 +105,7 @@ allow git_session_t self:tcp_socket { accept listen };
 list_dirs_pattern(git_session_t, git_user_content_t, git_user_content_t)
 read_files_pattern(git_session_t, git_user_content_t, git_user_content_t)
 userdom_search_user_home_dirs(git_session_t)
+allow git_session_t git_user_content_t:file map;
 
 kernel_read_system_state(git_session_t)
 
@@ -153,6 +154,7 @@ tunable_policy(`use_samba_home_dirs',`
 
 list_dirs_pattern(git_system_t, git_sys_content_t, git_sys_content_t)
 read_files_pattern(git_system_t, git_sys_content_t, git_sys_content_t)
+allow git_system_t git_sys_content_t:file map;
 
 kernel_read_network_state(git_system_t)
 kernel_read_system_state(git_system_t)
@@ -178,6 +180,7 @@ tunable_policy(`git_system_enable_homedirs',`
 	list_dirs_pattern(git_script_t, git_user_content_t, git_user_content_t)
 	list_dirs_pattern(git_system_t, git_user_content_t, git_user_content_t)
 	read_files_pattern(git_system_t, git_user_content_t, git_user_content_t)
+	allow git_system_t git_user_content_t:file map;
 
 ')
 
@@ -226,6 +229,8 @@ files_tmp_filetrans(git_script_t, git_script_tmp_t, { file dir })
 list_dirs_pattern(git_script_t, { git_sys_content_t git_user_content_t }, { git_sys_content_t git_user_content_t })
 read_files_pattern(git_script_t, { git_sys_content_t git_user_content_t }, { git_sys_content_t git_user_content_t })
 files_search_var_lib(git_script_t)
+allow git_script_t git_sys_content_t:file map;
+allow git_script_t git_user_content_t:file map;
 
 auth_use_nsswitch(git_script_t)
 
@@ -264,6 +269,11 @@ tunable_policy(`git_cgi_use_nfs',`
 	fs_read_nfs_files(git_script_t)
 ',`
 	fs_dontaudit_read_nfs_files(git_script_t)
+')
+
+optional_policy(`
+    gitosis_read_lib_files(git_script_t)
+    gitosis_mmap_lib_files(git_script_t)
 ')
 
 ########################################

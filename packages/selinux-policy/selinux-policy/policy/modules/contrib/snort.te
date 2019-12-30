@@ -29,7 +29,7 @@ files_pid_file(snort_var_run_t)
 # Local policy
 #
 
-allow snort_t self:capability { setgid setuid net_admin net_raw dac_override };
+allow snort_t self:capability { setgid setuid net_admin net_raw dac_read_search  };
 dontaudit snort_t self:capability sys_tty_config;
 allow snort_t self:process signal_perms;
 allow snort_t self:netlink_route_socket create_netlink_socket_perms;
@@ -92,6 +92,8 @@ fs_getattr_all_fs(snort_t)
 fs_search_auto_mountpoints(snort_t)
 
 auth_read_passwd(snort_t)
+
+auth_use_nsswitch(snort_t)
 
 init_read_utmp(snort_t)
 

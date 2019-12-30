@@ -33,7 +33,7 @@ files_pid_file(tuned_var_run_t)
 #
 
 allow tuned_t self:capability { net_admin sys_admin sys_nice sys_rawio };
-dontaudit tuned_t self:capability { dac_override sys_tty_config sys_ptrace };
+dontaudit tuned_t self:capability { dac_read_search  sys_tty_config };
 allow tuned_t self:process {  setsched signal };
 allow tuned_t self:fifo_file rw_fifo_file_perms;
 allow tuned_t self:netlink_kobject_uevent_socket create_socket_perms;
@@ -41,20 +41,11 @@ allow tuned_t self:netlink_socket create_socket_perms;
 allow tuned_t self:udp_socket create_socket_perms;
 allow tuned_t self:socket create_socket_perms;
 
-optional_policy(`
-    gen_require(`
-        class dbus acquire_svc;
-    ')
-    # Allow tuned to listen on com.redhat.tuned
-    allow tuned_t self:dbus acquire_svc; 
-')
-
 read_files_pattern(tuned_t, tuned_etc_t, tuned_etc_t)
 exec_files_pattern(tuned_t, tuned_etc_t, tuned_etc_t)
 
 manage_files_pattern(tuned_t, tuned_etc_t, tuned_rw_etc_t)
 files_etc_filetrans(tuned_t, tuned_rw_etc_t, file, "active_profile")
-files_etc_filetrans(tuned_t, tuned_rw_etc_t, file, "profile_mode")
 
 manage_dirs_pattern(tuned_t, tuned_log_t, tuned_log_t)
 manage_files_pattern(tuned_t, tuned_log_t, tuned_log_t)
@@ -80,18 +71,6 @@ kernel_rw_usermodehelper_state(tuned_t)
 kernel_rw_vm_sysctls(tuned_t)
 kernel_setsched(tuned_t)
 kernel_rw_all_sysctls(tuned_t)
-
-# tries to open/write hardllink restriction file...
-kernel_dontaudit_getattr_security_state(tuned_t)
-kernel_dontaudit_rw_security_state(tuned_t)
-
-# runs systemctl is-system-running
-optional_policy(`
-	init_status(tuned_t)
-	systemd_exec_systemctl(tuned_t)
-	init_stream_connect(tuned_t)
-	init_dontaudit_read_state(tuned_t)
-')
 
 corecmd_exec_bin(tuned_t)
 corecmd_exec_shell(tuned_t)
@@ -120,23 +99,15 @@ logging_filetrans_named_conf(tuned_t)
 
 mount_read_pid_files(tuned_t)
 
-modutils_domtrans_insmod(tuned_t)
+modutils_domtrans_kmod(tuned_t)
 
 udev_read_pid_files(tuned_t)
 
 userdom_dontaudit_search_user_home_dirs(tuned_t)
 
-miscfiles_dontaudit_getattr_cert(tuned_t)
-miscfiles_dontaudit_search_cert(tuned_t)
-
 optional_policy(`
 	dbus_system_bus_client(tuned_t)
-# BMW removed for CLIP
-#	dbus_connect_system_bus(tuned_t)
-')
-
-optional_policy(`
-	policykit_dbus_chat(tuned_t)
+	dbus_connect_system_bus(tuned_t)
 ')
 
 optional_policy(`
@@ -158,6 +129,10 @@ optional_policy(`
 
 optional_policy(`
 	mount_domtrans(tuned_t)
+')
+
+optional_policy(`
+	policykit_dbus_chat(tuned_t)
 ')
 
 # to allow network interface tuning

@@ -47,12 +47,17 @@ dev_rw_mtrr(vdagent_t)
 dev_read_sysfs(vdagent_t)
 dev_dontaudit_write_mtrr(vdagent_t)
 
+fs_getattr_cgroup(vdagent_t)
+fs_search_cgroup_dirs(vdagent_t)
+fs_getattr_tmpfs(vdagent_t)
+
 term_use_virtio_console(vdagent_t)
 
 init_read_state(vdagent_t)
 
 systemd_read_logind_sessions_files(vdagent_t)
 systemd_login_read_pid_files(vdagent_t)
+systemd_dbus_chat_logind(vdagent_t)
 
 logging_send_syslog_msg(vdagent_t)
 

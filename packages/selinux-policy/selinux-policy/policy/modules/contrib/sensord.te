@@ -26,16 +26,23 @@ logging_log_file(sensord_log_t)
 # Local policy
 #
 
-allow sensord_t self:process signal;
+allow sensord_t self:process { signal execmem };
 
 allow sensord_t self:fifo_file rw_fifo_file_perms;
 allow sensord_t self:unix_stream_socket create_stream_socket_perms;
 
 manage_files_pattern(sensord_t, sensord_log_t, sensord_log_t)
 logging_log_filetrans(sensord_t, sensord_log_t, file)
+allow sensord_t sensord_log_t:file map;
 
 manage_files_pattern(sensord_t, sensord_var_run_t, sensord_var_run_t)
 files_pid_filetrans(sensord_t, sensord_var_run_t, file)
+
+auth_use_nsswitch(sensord_t)
+
+can_exec(sensord_t, sensord_exec_t)
+
+corecmd_exec_shell(sensord_t)
 
 kernel_read_system_state(sensord_t)
 

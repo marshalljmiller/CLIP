@@ -41,6 +41,43 @@ interface(`snapper_dbus_chat',`
 	allow snapperd_t $1:dbus send_msg;
 ')
 
+########################################
+## <summary>
+##	Allow a domain to read inherited snapper pipe.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`snapper_read_inherited_pipe',`
+	gen_require(`
+		type snapperd_t;
+	')
+
+	allow $1 snapperd_t:fifo_file read_inherited_file_perms;
+')
+
+########################################
+## <summary>
+##	Allow a domain to relabel snapshots to snapperd_data_t 
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`snapper_relabel_snapshots',`
+	gen_require(`
+		type snapperd_data_t;
+	')
+
+	kernel_relabelfrom_unlabeled_dirs($1)
+	allow $1 snapperd_data_t:dir relabelto;
+')
+
 #######################################
 ## <summary>
 ##      Allow domain to create .smapshot

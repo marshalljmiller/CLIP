@@ -5,6 +5,7 @@ HOME_DIR/\.fonts\.conf	--	gen_context(system_u:object_r:user_fonts_config_t,s0)
 HOME_DIR/\.fonts\.d(/.*)?	gen_context(system_u:object_r:user_fonts_config_t,s0)
 HOME_DIR/\.fonts(/.*)?		gen_context(system_u:object_r:user_fonts_t,s0)
 HOME_DIR/\.local/share/fonts(/.*)?		gen_context(system_u:object_r:user_fonts_t,s0)
+HOME_DIR/\.local/share/xorg(/.*)?	gen_context(system_u:object_r:xdm_home_t,s0)
 HOME_DIR/\.fontconfig(/.*)?	gen_context(system_u:object_r:user_fonts_cache_t,s0)
 HOME_DIR/\.fonts/auto(/.*)?	gen_context(system_u:object_r:user_fonts_cache_t,s0)
 HOME_DIR/\.fonts\.cache-.* --	gen_context(system_u:object_r:user_fonts_cache_t,s0)
@@ -16,6 +17,7 @@ HOME_DIR/\.Xauth.*	--	gen_context(system_u:object_r:xauth_home_t,s0)
 HOME_DIR/\.Xauthority.*	--	gen_context(system_u:object_r:xauth_home_t,s0)
 HOME_DIR/\.cache/gdm(/.*)?	gen_context(system_u:object_r:xdm_home_t,s0)
 HOME_DIR/\.xsession-errors.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
+HOME_DIR/\.wayland-errors.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 HOME_DIR/\.dmrc.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 
 /root/\.fonts\.conf	--	gen_context(system_u:object_r:user_fonts_config_t,s0)
@@ -31,6 +33,7 @@ HOME_DIR/\.dmrc.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 /root/\.Xauth.*	--	gen_context(system_u:object_r:xauth_home_t,s0)
 /root/\.Xauthority.*	--	gen_context(system_u:object_r:xauth_home_t,s0)
 /root/\.xsession-errors.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
+/root/\.wayland-errors.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 /root/\.dmrc.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 
 #
@@ -88,6 +91,7 @@ HOME_DIR/\.dmrc.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 /usr/s?bin/gdm-binary	--	gen_context(system_u:object_r:xdm_exec_t,s0)
 /usr/s?bin/lightdm*	--	gen_context(system_u:object_r:xdm_exec_t,s0)
 /usr/s?bin/lxdm(-binary)?	--	gen_context(system_u:object_r:xdm_exec_t,s0)
+/usr/s?bin/nodm	--	gen_context(system_u:object_r:xdm_exec_t,s0)
 /usr/s?bin/[mxgkw]dm	--	gen_context(system_u:object_r:xdm_exec_t,s0)
 
 /usr/bin/sddm         	--	gen_context(system_u:object_r:xdm_exec_t,s0)
@@ -102,6 +106,14 @@ HOME_DIR/\.dmrc.*	--	gen_context(system_u:object_r:xdm_home_t,s0)
 /usr/bin/Xorg		--	gen_context(system_u:object_r:xserver_exec_t,s0)
 /usr/bin/Xvnc		--	gen_context(system_u:object_r:xserver_exec_t,s0)
 /usr/bin/x11vnc		--	gen_context(system_u:object_r:xserver_exec_t,s0)
+/usr/bin/nvidia.*	--	gen_context(system_u:object_r:xserver_exec_t,s0)
+
+/usr/libexec/Xorg\.bin  --  gen_context(system_u:object_r:xserver_exec_t,s0)   
+/usr/libexec/Xorg\.wrap  --  gen_context(system_u:object_r:xserver_exec_t,s0)
+
+/usr/libexec/gsd-backlight-helper	--	gen_context(system_u:object_r:xserver_exec_t,s0)
+
+/usr/libexec/gdm-disable-wayland	--	gen_context(system_u:object_r:xdm_exec_t,s0)
 
 /usr/lib/qt-.*/etc/settings(/.*)? gen_context(system_u:object_r:xdm_var_run_t,s0)
 
@@ -127,6 +139,7 @@ ifndef(`distro_debian',`
 /var/[xgkw]dm(/.*)?		gen_context(system_u:object_r:xserver_log_t,s0)
 
 /var/lib/gdm(3)?(/.*)?		gen_context(system_u:object_r:xdm_var_lib_t,s0)
+/var/lib/sddm(/.*)?		gen_context(system_u:object_r:xdm_var_lib_t,s0)
 /var/lib/lxdm(/.*)?		gen_context(system_u:object_r:xdm_var_lib_t,s0)
 /var/lib/lightdm(/.*)?		gen_context(system_u:object_r:xdm_var_lib_t,s0)
 /var/lib/lightdm-data(/.*)?	gen_context(system_u:object_r:xdm_var_lib_t,s0)

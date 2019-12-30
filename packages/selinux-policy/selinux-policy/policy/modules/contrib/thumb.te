@@ -27,7 +27,8 @@ files_tmpfs_file(thumb_tmpfs_t)
 #
 
 allow thumb_t self:process { setsched signal signull setrlimit };
-dontaudit thumb_t self:capability sys_tty_config;
+dontaudit thumb_t self:capability { dac_read_search sys_tty_config };
+dontaudit thumb_t self:process setfscreate;
 
 tunable_policy(`deny_execmem',`',`
 	allow thumb_t self:process execmem;
@@ -35,7 +36,9 @@ tunable_policy(`deny_execmem',`',`
 
 allow thumb_t self:fifo_file manage_fifo_file_perms;
 allow thumb_t self:unix_stream_socket create_stream_socket_perms;
+allow thumb_t self:unix_dgram_socket create_socket_perms;
 allow thumb_t self:netlink_route_socket r_netlink_socket_perms;
+allow thumb_t self:netlink_kobject_uevent_socket create_socket_perms;
 allow thumb_t self:udp_socket create_socket_perms;
 allow thumb_t self:tcp_socket create_socket_perms;
 allow thumb_t self:shm create_shm_perms;
@@ -45,6 +48,7 @@ manage_dirs_pattern(thumb_t, thumb_home_t, thumb_home_t)
 manage_files_pattern(thumb_t, thumb_home_t, thumb_home_t)
 userdom_user_home_dir_filetrans(thumb_t, thumb_home_t, dir, ".thumbnails")
 userdom_user_home_dir_filetrans(thumb_t, thumb_home_t, file, "missfont.log")
+userdom_user_home_dir_filetrans(thumb_t, thumb_home_t, file)
 userdom_dontaudit_access_check_user_content(thumb_t)
 userdom_rw_inherited_user_tmp_files(thumb_t)
 userdom_manage_home_texlive(thumb_t)
@@ -59,15 +63,19 @@ userdom_user_tmp_filetrans(thumb_t, thumb_tmp_t, { file dir sock_file })
 manage_dirs_pattern(thumb_t, thumb_tmpfs_t, thumb_tmpfs_t)
 manage_files_pattern(thumb_t, thumb_tmpfs_t, thumb_tmpfs_t)
 fs_tmpfs_filetrans(thumb_t, thumb_tmpfs_t, { dir file })
+allow thumb_t thumb_tmpfs_t:file execute;
 
 can_exec(thumb_t, thumb_exec_t)
 
 kernel_read_system_state(thumb_t)
+kernel_dgram_send(thumb_t)
+kernel_dontaudit_list_all_sysctls(thumb_t)
 
 corecmd_exec_bin(thumb_t)
 corecmd_exec_shell(thumb_t)
 
 corenet_tcp_connect_xserver_port(thumb_t)
+corenet_dontaudit_tcp_connect_all_ports(thumb_t)
 
 dev_read_sysfs(thumb_t)
 dev_read_urand(thumb_t)
@@ -80,10 +88,13 @@ domain_use_interactive_fds(thumb_t)
 domain_dontaudit_read_all_domains_state(thumb_t)
 
 files_read_non_security_files(thumb_t)
+files_map_non_security_files(thumb_t)
 
 fs_getattr_all_fs(thumb_t)
 fs_read_dos_files(thumb_t)
 fs_rw_inherited_tmpfs_files(thumb_t)
+fs_map_dos_files(thumb_t)
+fs_mmap_removable_files(thumb_t)
 
 auth_read_passwd(thumb_t)
 
@@ -91,11 +102,18 @@ tunable_policy(`selinuxuser_execmod',`
 	libs_legacy_use_shared_libs(thumb_t)
 ')
 
+libs_dontaudit_setattr_lib_dirs(thumb_t)
+
+logging_send_syslog_msg(thumb_t)
+
 miscfiles_read_fonts(thumb_t)
 miscfiles_dontaudit_setattr_fonts_dirs(thumb_t)
 miscfiles_dontaudit_setattr_fonts_cache_dirs(thumb_t)
 
 sysnet_read_config(thumb_t)
+
+
+term_dontaudit_use_unallocated_ttys(thumb_t)
 
 userdom_dontaudit_setattr_user_tmp(thumb_t)
 userdom_read_user_tmp_files(thumb_t)
@@ -138,6 +156,8 @@ optional_policy(`
 	gnome_manage_gstreamer_home_dirs(thumb_t)
 	gnome_exec_gstreamer_home_files(thumb_t)
 	gnome_create_generic_cache_dir(thumb_t)
+    gnome_setattr_cache_home_dir(thumb_t)
+    gnome_delete_generic_cache_files(thumb_t)
 	gnome_cache_filetrans(thumb_t, thumb_home_t, dir, "thumbnails")
 	gnome_cache_filetrans(thumb_t, thumb_home_t, file)
 ')
@@ -154,7 +174,15 @@ optional_policy(`
 	nslcd_dontaudit_write_sock_file(thumb_t)
 ')
 
+optional_policy(`
+	lvm_dontaudit_rw_pipes(thumb_t)
+')
+
 tunable_policy(`nis_enabled',`
 	corenet_dontaudit_udp_bind_all_ports(thumb_t)
 	corenet_dontaudit_udp_bind_generic_node(thumb_t)
+')
+
+optional_policy(`
+    storage_getattr_fixed_disk_dev(thumb_t)
 ')

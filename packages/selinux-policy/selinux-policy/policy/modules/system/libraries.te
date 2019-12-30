@@ -57,11 +57,12 @@ optional_policy(`
 # ldconfig local policy
 #
 
-allow ldconfig_t self:capability { dac_override sys_chroot };
+allow ldconfig_t self:capability { dac_read_search  sys_chroot };
 
 manage_dirs_pattern(ldconfig_t, ldconfig_cache_t, ldconfig_cache_t)
 manage_files_pattern(ldconfig_t, ldconfig_cache_t, ldconfig_cache_t)
 files_var_filetrans(ldconfig_t, ldconfig_cache_t, dir, "ldconfig")
+allow ldconfig_t ldconfig_cache_t:file map;
 
 manage_files_pattern(ldconfig_t, ld_so_cache_t, ld_so_cache_t)
 files_etc_filetrans(ldconfig_t, ld_so_cache_t, file)
@@ -101,10 +102,8 @@ init_read_script_tmp_files(ldconfig_t)
 logging_send_syslog_msg(ldconfig_t)
 
 term_use_console(ldconfig_t)
-optional_policy(`
-	userdom_use_inherited_user_terminals(ldconfig_t)
-	userdom_use_all_users_fds(ldconfig_t)
-')
+userdom_use_inherited_user_terminals(ldconfig_t)
+userdom_use_all_users_fds(ldconfig_t)
 
 ifdef(`distro_ubuntu',`
 	optional_policy(`
@@ -112,14 +111,12 @@ ifdef(`distro_ubuntu',`
 	')
 ')
 
-optional_policy(`
-	userdom_dontaudit_list_admin_dir(ldconfig_t)
-	userdom_list_user_home_dirs(ldconfig_t)
-	userdom_manage_user_home_content_files(ldconfig_t)
-	userdom_manage_user_tmp_files(ldconfig_t)
-	userdom_manage_user_tmp_symlinks(ldconfig_t)
-	userdom_rw_inherited_user_tmp_pipes(ldconfig_t)
-')
+userdom_dontaudit_list_admin_dir(ldconfig_t)
+userdom_list_user_home_dirs(ldconfig_t)
+userdom_manage_user_home_content_files(ldconfig_t)
+userdom_manage_user_tmp_files(ldconfig_t)
+userdom_manage_user_tmp_symlinks(ldconfig_t)
+userdom_rw_inherited_user_tmp_pipes(ldconfig_t)
 
 ifdef(`hide_broken_symptoms',`
 	ifdef(`distro_gentoo',`
@@ -151,6 +148,10 @@ optional_policy(`
 	apt_rw_pipes(ldconfig_t)
 	apt_use_fds(ldconfig_t)
 	apt_use_ptys(ldconfig_t)
+')
+
+optional_policy(`
+	glusterd_dontaudit_read_lib_dirs(ldconfig_t)
 ')
 
 optional_policy(`

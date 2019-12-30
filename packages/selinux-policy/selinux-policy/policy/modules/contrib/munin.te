@@ -88,7 +88,7 @@ optional_policy(`
 # Local policy
 #
 
-allow munin_t self:capability { chown dac_override kill setgid setuid sys_rawio };
+allow munin_t self:capability { chown dac_read_search  kill setgid setuid sys_rawio };
 dontaudit munin_t self:capability sys_tty_config;
 allow munin_t self:process { getsched setsched signal_perms };
 allow munin_t self:unix_stream_socket { accept connectto listen };
@@ -116,6 +116,7 @@ files_tmp_filetrans(munin_t, munin_tmp_t, { file dir sock_file })
 manage_dirs_pattern(munin_t, munin_var_lib_t, munin_var_lib_t)
 manage_files_pattern(munin_t, munin_var_lib_t, munin_var_lib_t)
 manage_lnk_files_pattern(munin_t, munin_var_lib_t, munin_var_lib_t)
+allow munin_t munin_var_lib_t:file map;
 
 rw_files_pattern(munin_t, munin_plugin_state_t, munin_plugin_state_t)
 
@@ -234,6 +235,8 @@ allow disk_munin_plugin_t self:tcp_socket create_stream_socket_perms;
 
 rw_files_pattern(disk_munin_plugin_t, munin_var_lib_t, munin_var_lib_t)
 
+auth_use_nsswitch(disk_munin_plugin_t)
+
 kernel_read_fs_sysctls(disk_munin_plugin_t)
 
 corenet_sendrecv_hddtemp_client_packets(disk_munin_plugin_t)
@@ -246,11 +249,13 @@ dev_getattr_lvm_control(disk_munin_plugin_t)
 dev_read_sysfs(disk_munin_plugin_t)
 dev_read_urand(disk_munin_plugin_t)
 dev_read_all_blk_files(disk_munin_plugin_t)
+dev_raw_memory_reader(disk_munin_plugin_t)
 
 fs_getattr_all_fs(disk_munin_plugin_t)
 fs_getattr_all_dirs(disk_munin_plugin_t)
 
 storage_raw_read_fixed_disk(disk_munin_plugin_t)
+storage_read_scsi_generic(disk_munin_plugin_t)
 
 sysnet_read_config(disk_munin_plugin_t)
 
@@ -271,14 +276,18 @@ optional_policy(`
 # Mail local policy
 #
 
-allow mail_munin_plugin_t self:capability dac_override;
+allow mail_munin_plugin_t self:capability { dac_read_search  };
 
 allow mail_munin_plugin_t self:tcp_socket create_stream_socket_perms;
 allow mail_munin_plugin_t self:netlink_route_socket r_netlink_socket_perms;
+allow mail_munin_plugin_t self:udp_socket create_socket_perms;
 
 rw_files_pattern(mail_munin_plugin_t, munin_var_lib_t, munin_var_lib_t)
 
+auth_use_nsswitch(mail_munin_plugin_t)
+
 kernel_read_net_sysctls(mail_munin_plugin_t)
+kernel_read_network_state(mail_munin_plugin_t)
 
 dev_read_urand(mail_munin_plugin_t)
 
@@ -315,6 +324,8 @@ optional_policy(`
 #
 # Selinux local policy
 #
+
+auth_use_nsswitch(selinux_munin_plugin_t)
 
 selinux_get_enforce_mode(selinux_munin_plugin_t)
 
@@ -427,6 +438,11 @@ optional_policy(`
 	bind_read_config(system_munin_plugin_t)
 ')
 
+optional_policy(`
+    sssd_read_public_files(system_munin_plugin_t)
+    sssd_stream_connect(system_munin_plugin_t)
+')
+
 #######################################
 #
 # Unconfined plugin local policy
@@ -460,7 +476,7 @@ manage_files_pattern(munin_script_t, munin_log_t, munin_log_t)
 
 files_search_var_lib(munin_script_t)
 
-auth_read_passwd(munin_script_t)
+auth_use_nsswitch(munin_script_t)
 
 optional_policy(`
 	apache_search_sys_content(munin_t)

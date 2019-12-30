@@ -24,7 +24,7 @@ files_config_file(firstboot_etc_t)
 # Local policy
 #
 
-allow firstboot_t self:capability { dac_override setgid };
+allow firstboot_t self:capability { dac_read_search  setgid };
 allow firstboot_t self:process setfscreate;
 allow firstboot_t self:fifo_file rw_fifo_file_perms;
 allow firstboot_t self:tcp_socket create_stream_socket_perms;
@@ -98,8 +98,8 @@ optional_policy(`
 ')
 
 optional_policy(`
-	modutils_domtrans_insmod(firstboot_t)
-	modutils_domtrans_depmod(firstboot_t)
+	modutils_domtrans_kmod(firstboot_t)
+	modutils_domtrans_kmod(firstboot_t)
 	modutils_read_module_config(firstboot_t)
 	modutils_read_module_deps(firstboot_t)
 ')

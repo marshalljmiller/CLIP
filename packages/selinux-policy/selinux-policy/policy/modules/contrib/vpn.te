@@ -79,6 +79,8 @@ domain_use_interactive_fds(vpnc_t)
 
 fs_getattr_xattr_fs(vpnc_t)
 fs_getattr_tmpfs(vpnc_t)
+fs_read_configfs_dirs(vpnc_t)
+fs_read_configfs_files(vpnc_t)
 
 term_use_all_inherited_ptys(vpnc_t)
 term_use_all_inherited_ttys(vpnc_t)
@@ -100,6 +102,8 @@ locallogin_use_fds(vpnc_t)
 
 logging_send_syslog_msg(vpnc_t)
 logging_dontaudit_search_logs(vpnc_t)
+
+miscfiles_read_certs(vpnc_t)
 
 seutil_use_newrole_fds(vpnc_t)
 

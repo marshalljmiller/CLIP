@@ -45,6 +45,7 @@ fs_dontaudit_use_tmpfs_chr_dev(hostname_t)
 
 term_dontaudit_use_console(hostname_t)
 term_use_all_inherited_terms(hostname_t)
+term_use_usb_ttys(hostname_t)
 
 init_use_fds(hostname_t)
 init_use_script_fds(hostname_t)
@@ -60,11 +61,19 @@ sysnet_read_config(hostname_t)
 sysnet_dns_name_resolve(hostname_t)
 
 optional_policy(`
+	kdump_dontaudit_inherited_kdumpctl_tmp_pipes(hostname_t)
+')
+
+optional_policy(`
 	mock_dontaudit_write_lib_chr_files(hostname_t)
 ')
 
 optional_policy(`
 	nis_use_ypbind(hostname_t)
+')
+
+optional_policy(`
+    rhcs_manage_cluster_tmp_files(hostname_t)
 ')
 
 optional_policy(`

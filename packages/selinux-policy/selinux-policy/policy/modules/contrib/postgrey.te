@@ -29,7 +29,7 @@ files_pid_file(postgrey_var_run_t)
 # Local policy
 #
 
-allow postgrey_t self:capability { chown dac_override setgid setuid };
+allow postgrey_t self:capability { chown dac_read_search dac_override setgid setuid };
 dontaudit postgrey_t self:capability sys_tty_config;
 allow postgrey_t self:process signal_perms;
 allow postgrey_t self:fifo_file create_fifo_file_perms;
@@ -43,6 +43,7 @@ manage_dirs_pattern(postgrey_t, postgrey_spool_t, postgrey_spool_t)
 manage_files_pattern(postgrey_t, postgrey_spool_t, postgrey_spool_t)
 manage_fifo_files_pattern(postgrey_t, postgrey_spool_t, postgrey_spool_t)
 manage_sock_files_pattern(postgrey_t, postgrey_spool_t, postgrey_spool_t)
+allow postgrey_t postgrey_spool_t:file map;
 
 manage_files_pattern(postgrey_t, postgrey_var_lib_t, postgrey_var_lib_t)
 files_var_lib_filetrans(postgrey_t, postgrey_var_lib_t, file)
@@ -55,7 +56,9 @@ files_pid_filetrans(postgrey_t, postgrey_var_run_t, { dir file sock_file })
 kernel_read_system_state(postgrey_t)
 kernel_read_kernel_sysctls(postgrey_t)
 
-corecmd_search_bin(postgrey_t)
+auth_use_nsswitch(postgrey_t)
+
+corecmd_exec_bin(postgrey_t)
 
 corenet_all_recvfrom_netlabel(postgrey_t)
 corenet_tcp_sendrecv_generic_if(postgrey_t)

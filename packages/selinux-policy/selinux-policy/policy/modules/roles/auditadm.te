@@ -14,7 +14,7 @@ userdom_confined_admin_template(auditadm)
 # Local policy
 #
 
-allow auditadm_t self:capability { dac_read_search dac_override };
+allow auditadm_t self:capability { dac_read_search  };
 
 kernel_read_ring_buffer(auditadm_t)
 
@@ -69,9 +69,4 @@ optional_policy(`
 
 optional_policy(`
 	vlock_run(auditadm_t, auditadm_r)
-')
-
-optional_policy(`
-        xserver_role(auditadm_r, auditadm_t)
-        miscfiles_map_fonts(auditadm_t)
 ')

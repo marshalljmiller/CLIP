@@ -98,6 +98,26 @@ interface(`glusterd_filetrans_named_pid',`
 
 ########################################
 ## <summary>
+##	Manage glusterd PID files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`glusterd_manage_pid',`
+	gen_require(`
+		type glusterd_var_run_t;
+	')
+
+	files_search_pids($1)
+	manage_dirs_pattern($1, glusterd_var_run_t, glusterd_var_run_t)
+	manage_files_pattern($1, glusterd_var_run_t, glusterd_var_run_t)
+')
+
+########################################
+## <summary>
 ##	Manage glusterd log files
 ## </summary>
 ## <param name="domain">
@@ -158,6 +178,24 @@ interface(`glusterd_read_conf',`
 
 ######################################
 ## <summary>
+##  Dontaudit Read  /var/lib/glusterd files.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+interface(`glusterd_dontaudit_read_lib_dirs',`
+       gen_require(`
+               type glusterd_var_lib_t;
+       ')
+
+    dontaudit $1 glusterd_var_lib_t:dir list_dir_perms;
+')
+
+######################################
+## <summary>
 ##  Read and write /var/lib/glusterd files.
 ## </summary>
 ## <param name="domain">
@@ -177,6 +215,26 @@ interface(`glusterd_rw_lib',`
 
 ######################################
 ## <summary>
+## Read /var/lib/glusterd files.
+## </summary>
+## <param name="domain">
+##     <summary>
+##     Domain allowed access.
+##     </summary>
+## </param>
+#
+interface(`glusterd_read_lib_files',`
+       gen_require(`
+               type glusterd_var_lib_t;
+       ')
+
+    files_search_var_lib($1)
+	allow $1 glusterd_var_lib_t:dir search_dir_perms;
+    read_files_pattern($1, glusterd_var_lib_t, glusterd_var_lib_t)
+')
+
+######################################
+## <summary>
 ## Read and write /var/lib/glusterd files.
 ## </summary>
 ## <param name="domain">
@@ -191,6 +249,7 @@ interface(`glusterd_manage_lib_files',`
        ')
 
     files_search_var_lib($1)
+	allow $1 glusterd_var_lib_t:dir search_dir_perms;
     manage_files_pattern($1, glusterd_var_lib_t, glusterd_var_lib_t)
 ')
 
@@ -240,4 +299,3 @@ interface(`glusterd_admin',`
 	admin_pattern($1, glusterd_conf_t)
 
 ')
-
