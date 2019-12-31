@@ -1,78 +1,25 @@
-# github repo with selinux-policy base sources
-%global git0 https://github.com/fedora-selinux/selinux-policy
-%global commit0 9c02e9977eedf96c45a26ed4a1d0c5e6c3f2c8d9
-%global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
-
-# github repo with selinux-policy contrib sources
-%global git1 https://github.com/fedora-selinux/selinux-policy-contrib
-%global commit1 c8ebb9fb34b06455a41e1ff59626c186d8602452
-%global shortcommit1 %(c=%{commit1}; echo ${c:0:7})
-
 %define distro redhat
 %define polyinstatiate n
 %define monolithic n
-%if %{?BUILD_DOC:0}%{!?BUILD_DOC:1}
-%define BUILD_DOC 1
-%endif
-%if %{?BUILD_TARGETED:0}%{!?BUILD_TARGETED:1}
+%define BUILD_DOC 0
 %define BUILD_TARGETED 1
-%endif
-%if %{?BUILD_MINIMUM:0}%{!?BUILD_MINIMUM:1}
-%define BUILD_MINIMUM 1
-%endif
-%if %{?BUILD_MLS:0}%{!?BUILD_MLS:1}
-%define BUILD_MLS 1
-%endif
+%define BUILD_MINIMUM 0
+%define BUILD_MLS 0
 %define POLICYVER 31
 %define POLICYCOREUTILSVER 2.9
 %define CHECKPOLICYVER 2.9
 Summary: SELinux policy configuration
 Name: selinux-policy
-Version: 3.14.3
+Version: 3.14.3.999
 Release: 20%{?dist}
 License: GPLv2+
-Source: %{git0}/archive/%{commit0}/%{name}-%{shortcommit0}.tar.gz
-Source29: %{git1}/archive/%{commit1}/%{name}-contrib-%{shortcommit1}.tar.gz
-Source1: modules-targeted-base.conf
-Source31: modules-targeted-contrib.conf
-Source2: booleans-targeted.conf
-Source3: Makefile.devel
-Source4: setrans-targeted.conf
-Source5: modules-mls-base.conf
-Source32: modules-mls-contrib.conf
-Source6: booleans-mls.conf
-Source8: setrans-mls.conf
-Source14: securetty_types-targeted
-Source15: securetty_types-mls
-#Source16: modules-minimum.conf
-Source17: booleans-minimum.conf
-Source18: setrans-minimum.conf
-Source19: securetty_types-minimum
-Source20: customizable_types
-Source22: users-mls
-Source23: users-targeted
-Source25: users-minimum
-Source26: file_contexts.subs_dist
+Source: %{name}-%{version}.tar.gz
 Source27: selinux-policy.conf
-Source28: permissivedomains.cil
 Source30: booleans.subs_dist
 
-# Tool helps during policy development, to expand system m4 macros to raw allow rules
-# Git repo: https://gitlab.cee.redhat.com/SELinux/macro-expander
-Source33: macro-expander
-
-# Include SELinux policy for container from separate container-selinux repo
-# Git repo: https://github.com/containers/container-selinux.git
-Source35: container-selinux.tgz
-
-# Do a factory reset when there's no policy.kern file in a store
-# http://bugzilla.redhat.com/1290659
-#Source100: selinux-factory-reset
-#Source101: selinux-factory-reset@.service
 # Provide rpm macros for packages installing SELinux modules
 Source102: rpm.macros
 
-Url: %{git0}
 BuildArch: noarch
 BuildRequires: python3 gawk checkpolicy >= %{CHECKPOLICYVER} m4 policycoreutils-devel >= %{POLICYCOREUTILSVER} bzip2
 BuildRequires: gcc
@@ -137,7 +84,6 @@ Requires(post): policycoreutils-devel >= %{POLICYCOREUTILSVER}
 SELinux policy development and man page package
 
 %files devel
-%{_bindir}/macro-expander
 %dir %{_usr}/share/selinux/devel
 %dir %{_usr}/share/selinux/devel/include
 %{_usr}/share/selinux/devel/include/*
@@ -345,17 +291,8 @@ mkdir -p %{buildroot}/%{_libexecdir}/selinux/ \
 %build
 
 %prep 
-%setup -n %{name}-contrib-%{commit1} -q -b 29
-tar -xf %{SOURCE35}
-contrib_path=`pwd`
-%setup -n %{name}-%{commit0} -q
+%setup -n %{name} -q
 refpolicy_path=`pwd`
-cp $contrib_path/* $refpolicy_path/policy/modules/contrib
-
-mkdir selinux_config
-for i in %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} %{SOURCE5} %{SOURCE6} %{SOURCE8} %{SOURCE14} %{SOURCE15} %{SOURCE17} %{SOURCE18} %{SOURCE19} %{SOURCE20} %{SOURCE22} %{SOURCE23} %{SOURCE25} %{SOURCE26} %{SOURCE31} %{SOURCE32};do
- cp $i selinux_config
-done
 
 %install
 export PYTHON=%{__python3}
@@ -367,8 +304,8 @@ touch %{buildroot}%{_sysconfdir}/selinux/config
 touch %{buildroot}%{_sysconfdir}/sysconfig/selinux
 mkdir -p %{buildroot}%{_usr}/lib/tmpfiles.d/
 cp %{SOURCE27} %{buildroot}%{_usr}/lib/tmpfiles.d/
-mkdir -p %{buildroot}%{_bindir}
-cp %{SOURCE33} %{buildroot}%{_bindir}/
+#mkdir -p %{buildroot}%{_bindir}
+#cp %{SOURCE33} %{buildroot}%{_bindir}/
 
 # Always create policy module package directories
 mkdir -p %{buildroot}%{_usr}/share/selinux/{targeted,mls,minimum,modules}/
@@ -380,17 +317,12 @@ mkdir -p %{buildroot}%{_usr}/share/selinux/packages
 make clean
 %if %{BUILD_TARGETED}
 # Build targeted policy
-# Commented out because only targeted ref policy currently builds
-cp %{SOURCE28} %{buildroot}/
 %makeCmds targeted mcs n allow
 %makeModulesConf targeted base contrib
 %installCmds targeted mcs n allow
-# install permissivedomains.cil
-semodule -p %{buildroot} -X 100 -i %{buildroot}/permissivedomains.cil
-rm -rf %{buildroot}/permissivedomains.cil
 # recreate sandbox.pp
 rm -rf %{buildroot}%{_sharedstatedir}/selinux/targeted/active/modules/100/sandbox
-make UNK_PERMS=%4 NAME=%1 TYPE=%2 DISTRO=%{distro} UBAC=n DIRECT_INITRC=%3 MONOLITHIC=%{monolithic} DESTDIR=%{buildroot} MLS_CATS=1024 MCS_CATS=1024 sandbox.pp
+make UNK_PERMS=allow NAME=targeted TYPE=mcs DISTRO=%{distro} UBAC=n DIRECT_INITRC=n MONOLITHIC=%{monolithic} DESTDIR=%{buildroot} MLS_CATS=1024 MCS_CATS=1024 sandbox.pp
 mv sandbox.pp %{buildroot}/usr/share/selinux/packages/sandbox.pp
 %modulesList targeted
 %nonBaseModulesList targeted
@@ -557,7 +489,6 @@ exit 0
 %config(noreplace) %{_sysconfdir}/selinux/targeted/contexts/users/unconfined_u
 %config(noreplace) %{_sysconfdir}/selinux/targeted/contexts/users/sysadm_u 
 %fileList targeted
-%verify(not md5 size mtime) %{_sharedstatedir}/selinux/targeted/active/modules/100/permissivedomains
 %endif
 
 %if %{BUILD_MINIMUM}
