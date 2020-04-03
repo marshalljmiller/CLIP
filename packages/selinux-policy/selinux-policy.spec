@@ -81,15 +81,17 @@ Requires: /usr/bin/make
 Requires(post): policycoreutils-devel >= %{POLICYCOREUTILSVER}
 
 %description devel
-SELinux policy development and man page package
+SELinux policy development package
 
 %files devel
 %dir %{_usr}/share/selinux/devel
 %dir %{_usr}/share/selinux/devel/include
 %{_usr}/share/selinux/devel/include/*
+%if %{BUILD_DOC}
 %dir %{_usr}/share/selinux/devel/html
 %{_usr}/share/selinux/devel/html/*html
 %{_usr}/share/selinux/devel/html/*css
+%endif
 %{_usr}/share/selinux/devel/Makefile
 %{_usr}/share/selinux/devel/example.*
 %{_usr}/share/selinux/devel/policy.*
@@ -99,6 +101,7 @@ SELinux policy development and man page package
 selinuxenabled && /usr/bin/sepolgen-ifgen 2>/dev/null 
 exit 0
 
+%if %{BUILD_DOC}
 %package doc
 Summary: SELinux policy documentation
 Requires(pre): selinux-policy = %{version}-%{release}
@@ -111,6 +114,7 @@ SELinux policy documentation package
 %{_mandir}/man*/*
 %{_mandir}/ru/*/*
 %doc %{_usr}/share/doc/%{name}
+%endif
 
 %define makeCmds() \
 make UNK_PERMS=%4 NAME=%1 TYPE=%2 DISTRO=%{distro} UBAC=n DIRECT_INITRC=%3 MONOLITHIC=%{monolithic} MLS_CATS=1024 MCS_CATS=1024 bare \
@@ -356,19 +360,23 @@ rm -rf %{buildroot}%{_sharedstatedir}/selinux/minimum/active/modules/100/sandbox
 # remove leftovers when save-previous=true (semanage.conf) is used
 rm -rf %{buildroot}%{_sharedstatedir}/selinux/{minimum,targeted,mls}/previous
 
+%if %{BUILD_DOC}
 mkdir -p %{buildroot}%{_mandir}
 cp -R  man/* %{buildroot}%{_mandir}
 make UNK_PERMS=allow NAME=targeted TYPE=mcs DISTRO=%{distro} UBAC=n DIRECT_INITRC=n MONOLITHIC=%{monolithic} DESTDIR=%{buildroot} PKGNAME=%{name} MLS_CATS=1024 MCS_CATS=1024 install-docs
+%endif
 make UNK_PERMS=allow NAME=targeted TYPE=mcs DISTRO=%{distro} UBAC=n DIRECT_INITRC=n MONOLITHIC=%{monolithic} DESTDIR=%{buildroot} PKGNAME=%{name} MLS_CATS=1024 MCS_CATS=1024 install-headers
 mkdir %{buildroot}%{_usr}/share/selinux/devel/
 mv %{buildroot}%{_usr}/share/selinux/targeted/include %{buildroot}%{_usr}/share/selinux/devel/include
 install -m 644 selinux_config/Makefile.devel %{buildroot}%{_usr}/share/selinux/devel/Makefile
 install -m 644 doc/example.* %{buildroot}%{_usr}/share/selinux/devel/
 install -m 644 doc/policy.* %{buildroot}%{_usr}/share/selinux/devel/
+%if %{BUILD_DOC}
 /usr/bin/sepolicy manpage -a -p %{buildroot}/usr/share/man/man8/ -w -r %{buildroot}
 mkdir %{buildroot}%{_usr}/share/selinux/devel/html
 mv %{buildroot}%{_usr}/share/man/man8/*.html %{buildroot}%{_usr}/share/selinux/devel/html
 mv %{buildroot}%{_usr}/share/man/man8/style.css %{buildroot}%{_usr}/share/selinux/devel/html
+%endif
 
 mkdir -p %{buildroot}%{_rpmconfigdir}/macros.d
 install -m 644 %{SOURCE102} %{buildroot}%{_rpmconfigdir}/macros.d/macros.selinux-policy
